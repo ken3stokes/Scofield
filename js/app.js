@@ -653,6 +653,17 @@ function importGoals() {
 
 // Show Instructions
 function showInstructions() {
-    const modal = new bootstrap.Modal(document.getElementById("instructionsModal"));
+    if (typeof bootstrap === 'undefined') {
+        console.error('Bootstrap is not loaded');
+        alert('Error: Could not show instructions. Please refresh the page and try again.');
+        return;
+    }
+    const instructionsModal = document.getElementById("instructionsModal");
+    if (!instructionsModal) {
+        console.error('Instructions modal element not found');
+        alert('Error: Could not find instructions modal. Please refresh the page and try again.');
+        return;
+    }
+    const modal = new bootstrap.Modal(instructionsModal);
     modal.show();
 }
