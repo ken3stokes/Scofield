@@ -650,3 +650,9 @@ function importGoals() {
     
     input.click();
 }
+
+// Show Instructions
+function showInstructions() {
+    const modal = new bootstrap.Modal(document.getElementById("instructionsModal"));
+    modal.show();
+}

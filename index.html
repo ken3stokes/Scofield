@@ -23,6 +23,9 @@
                 <button class="btn btn-outline-light btn-sm" onclick="importGoals()">
                     <i class="bi bi-upload me-1 d-none d-sm-inline"></i>Import
                 </button>
+                <button class="btn btn-outline-light btn-sm" onclick="showInstructions()">
+                    <i class="bi bi-question-circle me-1 d-none d-sm-inline"></i>Help
+                </button>
                 <button class="btn btn-outline-light btn-sm" onclick="showReports()">
                     <i class="bi bi-graph-up me-1 d-none d-sm-inline"></i>Reports
                 </button>
@@ -130,6 +133,64 @@
                                 <button class="btn btn-primary" type="submit">Add Task</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Instructions Modal -->
+    <div class="modal fade" id="instructionsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Instructions & Privacy Information</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-4">
+                        <h6 class="mb-3">Data Privacy</h6>
+                        <p>Your goals and tasks are stored privately on your device using your browser's built-in database (IndexedDB). No data is sent to any server or stored in the cloud.</p>
+                    </div>
+
+                    <div class="mb-4">
+                        <h6 class="mb-3">Exporting Your Goals</h6>
+                        <ol>
+                            <li>Click the "Export" button in the navigation bar</li>
+                            <li>Your goals and tasks will be saved as a JSON file</li>
+                            <li>The file will be named "scofield-goals-backup-[DATE].json"</li>
+                            <li>Store this file safely - it contains all your goal data</li>
+                        </ol>
+                    </div>
+
+                    <div class="mb-4">
+                        <h6 class="mb-3">Importing Your Goals</h6>
+                        <ol>
+                            <li>Click the "Import" button in the navigation bar</li>
+                            <li>Select a previously exported JSON file</li>
+                            <li>Your current goals will be replaced with the imported data</li>
+                            <li>A success message will appear when import is complete</li>
+                        </ol>
+                    </div>
+
+                    <div class="mb-4">
+                        <h6 class="mb-3">When to Backup</h6>
+                        <ul>
+                            <li>Before clearing browser data</li>
+                            <li>Before switching browsers</li>
+                            <li>After setting important goals</li>
+                            <li>Regularly as a safety measure</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h6 class="mb-3">Important Notes</h6>
+                        <ul>
+                            <li>Importing will replace all current goals</li>
+                            <li>Keep your backup files secure</li>
+                            <li>Regular backups are recommended</li>
+                            <li>Data is only stored on your device</li>
+                        </ul>
                     </div>
                 </div>
             </div>
