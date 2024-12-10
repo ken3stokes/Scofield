@@ -3,6 +3,9 @@ let db;
 const dbName = "SMARTGoalsDB";
 const dbVersion = 1;
 
+// Track last export date
+let lastExportDate = localStorage.getItem('lastExportDate') || null;
+
 function initializeDB() {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(dbName, dbVersion);
@@ -535,49 +538,66 @@ function exportReport() {
 }
 
 // Export Goals
-function exportGoals() {
-    if (!db) {
-        alert("Database not ready. Please try again in a moment.");
-        return;
-    }
-
-    const transaction = db.transaction(["goals", "tasks"], "readonly");
-    const goalStore = transaction.objectStore("goals");
-    const taskStore = transaction.objectStore("tasks");
-    
-    const goalsRequest = goalStore.getAll();
-    const tasksRequest = taskStore.getAll();
-    
-    goalsRequest.onsuccess = () => {
-        tasksRequest.onsuccess = () => {
-            const exportData = {
-                goals: goalsRequest.result,
-                tasks: tasksRequest.result,
-                exportDate: new Date().toISOString()
-            };
-            
-            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = `scofield-goals-backup-${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-        };
+async function exportGoals() {
+    try {
+        const transaction = db.transaction(["goals", "tasks"], "readonly");
+        const goalStore = transaction.objectStore("goals");
+        const taskStore = transaction.objectStore("tasks");
         
-        tasksRequest.onerror = (error) => {
-            console.error("Error exporting tasks:", error);
-            alert("Error exporting tasks. Please try again.");
-        };
-    };
-    
-    goalsRequest.onerror = (error) => {
-        console.error("Error exporting goals:", error);
+        const goals = await new Promise((resolve, reject) => {
+            const request = goalStore.getAll();
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+        
+        const tasks = await new Promise((resolve, reject) => {
+            const request = taskStore.getAll();
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+        
+        const data = { goals, tasks };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const date = new Date().toISOString().split('T')[0];
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `scofield-goals-backup-${date}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        // Update last export date
+        lastExportDate = new Date().toISOString();
+        localStorage.setItem('lastExportDate', lastExportDate);
+        
+    } catch (error) {
+        console.error("Export error:", error);
         alert("Error exporting goals. Please try again.");
-    };
+    }
 }
+
+// Check if backup is needed
+function isBackupNeeded() {
+    if (!lastExportDate) return true;
+    
+    const lastExport = new Date(lastExportDate);
+    const now = new Date();
+    const daysSinceLastExport = Math.floor((now - lastExport) / (1000 * 60 * 60 * 24));
+    
+    // Return true if it's been more than 7 days since last export
+    return daysSinceLastExport > 7;
+}
+
+// Add beforeunload event listener
+window.addEventListener('beforeunload', (event) => {
+    if (isBackupNeeded()) {
+        const message = 'You haven\'t backed up your goals in a while. Are you sure you want to leave?';
+        event.returnValue = message;
+        return message;
+    }
+});
 
 // Import Goals
 function importGoals() {
