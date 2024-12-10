@@ -1,7 +1,15 @@
+/* Mobile-First Base Styles */
+:root {
+    --mobile-padding: 1rem;
+    --tablet-padding: 2rem;
+    --desktop-padding: 3rem;
+}
+
 /* Common Theme Elements */
 .brand-logo {
     font-family: 'Roboto Mono', monospace;
     letter-spacing: 2px;
+    font-size: clamp(1.2rem, 2vw, 1.5rem);
 }
 
 /* Tattoo Theme */
@@ -12,19 +20,206 @@
     --background-color: #E8EAF6;
 }
 
+/* Mobile-First Navigation */
 .theme-tattoo .navbar {
     background: var(--primary-color) !important;
     border-bottom: 1px solid var(--accent-color);
+    padding: 1rem var(--mobile-padding);
 }
 
+.navbar .container {
+    flex-wrap: nowrap;
+}
+
+.navbar-brand {
+    font-size: clamp(1.2rem, 4vw, 1.5rem);
+}
+
+/* Mobile-First Hero Section */
 .theme-tattoo .hero-section {
     background: var(--primary-color);
     color: white;
     position: relative;
     overflow: hidden;
-    padding: 6rem 0;
+    padding: clamp(3rem, 10vh, 6rem) var(--mobile-padding);
 }
 
+.hero-section h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    line-height: 1.2;
+    margin-bottom: 1rem;
+}
+
+.hero-section .lead {
+    font-size: clamp(1rem, 3vw, 1.25rem);
+    margin-bottom: 2rem;
+}
+
+/* Mobile-First Feature Cards */
+.feature-card {
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+}
+
+.feature-card .card-body {
+    padding: 1.5rem;
+}
+
+.feature-card h3 {
+    font-size: clamp(1.25rem, 3vw, 1.5rem);
+}
+
+/* Mobile-First Progress Bars */
+.progress {
+    height: clamp(20px, 4vh, 25px);
+    margin-bottom: 1rem;
+}
+
+/* Mobile-First Buttons */
+.btn {
+    white-space: nowrap;
+    padding: 0.75rem 1.5rem;
+    font-size: clamp(0.875rem, 2vw, 1rem);
+}
+
+.btn-lg {
+    padding: clamp(0.75rem, 2vh, 1rem) clamp(1.5rem, 4vw, 2rem);
+}
+
+/* Mobile-First Quote Section */
+.quote-section blockquote {
+    font-size: clamp(1.1rem, 3vw, 1.5rem);
+    padding: 1.5rem;
+}
+
+/* Mobile Navigation Menu */
+@media (max-width: 768px) {
+    .navbar-nav {
+        padding: 1rem 0;
+    }
+    
+    .navbar .btn {
+        margin: 0.5rem 0;
+        width: 100%;
+    }
+
+    .hero-section .btn-group-vertical {
+        width: 100%;
+    }
+
+    .feature-list {
+        flex-direction: column;
+    }
+
+    .feature-item {
+        margin: 0.5rem 0;
+    }
+}
+
+/* Tablet Styles */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .container {
+        padding-left: var(--tablet-padding);
+        padding-right: var(--tablet-padding);
+    }
+
+    .feature-card {
+        margin-bottom: 2rem;
+    }
+}
+
+/* Desktop Styles */
+@media (min-width: 1025px) {
+    .container {
+        padding-left: var(--desktop-padding);
+        padding-right: var(--desktop-padding);
+    }
+
+    .hero-section {
+        padding: 8rem 0;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+    }
+}
+
+/* Responsive Grid Adjustments */
+.row {
+    margin-left: calc(-1 * var(--mobile-padding));
+    margin-right: calc(-1 * var(--mobile-padding));
+}
+
+.col, [class*="col-"] {
+    padding-left: var(--mobile-padding);
+    padding-right: var(--mobile-padding);
+}
+
+/* Responsive Tables */
+.table-responsive {
+    margin-bottom: 1rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile-First Forms */
+.form-control {
+    font-size: clamp(0.875rem, 2vw, 1rem);
+    padding: 0.75rem;
+}
+
+/* Mobile-First Modal Adjustments */
+.modal-dialog {
+    margin: 0.5rem;
+    max-width: calc(100% - 1rem);
+}
+
+@media (min-width: 576px) {
+    .modal-dialog {
+        margin: 1.75rem auto;
+        max-width: 500px;
+    }
+}
+
+/* Touch-Friendly Elements */
+.btn, .card, .form-control {
+    min-height: 44px; /* Minimum touch target size */
+}
+
+/* Improved Mobile Typography */
+body {
+    font-size: 16px; /* Base font size for better readability */
+    line-height: 1.5;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    line-height: 1.2;
+    margin-bottom: 1rem;
+}
+
+/* Mobile-First Spacing */
+.section {
+    padding: clamp(2rem, 5vh, 4rem) 0;
+}
+
+.mb-mobile {
+    margin-bottom: 1rem;
+}
+
+/* Mobile-First Charts */
+.chart-container {
+    position: relative;
+    width: 100%;
+    max-height: 60vh;
+}
+
+/* Tattoo Theme */
 .theme-tattoo .hero-section::before {
     content: '';
     position: absolute;
@@ -41,70 +236,6 @@
     background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
 }
 
-/* Feature Cards */
-.feature-card {
-    border: none;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    background: white;
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-.feature-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
-}
-
-.feature-card .card-body {
-    padding: 2rem;
-}
-
-/* Progress Bars */
-.progress {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 50px;
-    overflow: hidden;
-}
-
-.progress-bar {
-    background: linear-gradient(45deg, var(--secondary-color), var(--accent-color));
-    transition: width 1.5s ease-in-out;
-}
-
-/* Buttons */
-.btn-theme {
-    background: var(--accent-color);
-    color: white;
-    border: none;
-    padding: 0.75rem 2rem;
-    border-radius: 50px;
-    transition: all 0.3s ease;
-}
-
-.btn-theme:hover {
-    background: var(--secondary-color);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-/* Quote Card */
-.theme-tattoo .card.bg-dark {
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)) !important;
-    border: none;
-    border-radius: 12px;
-}
-
-/* Numbered Steps */
-[class^="bi-"].me-2 {
-    color: var(--accent-color);
-}
-
-/* Hero Checklist */
-.hero-section .bi-check-circle-fill {
-    color: var(--accent-color);
-}
-
 /* Animations */
 @keyframes fadeInUp {
     from {
@@ -119,15 +250,4 @@
 
 .feature-card, .hero-section h1, .hero-section p {
     animation: fadeInUp 0.6s ease-out forwards;
-}
-
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-    .hero-section {
-        padding: 4rem 0;
-    }
-    
-    .feature-card {
-        margin-bottom: 1rem;
-    }
 }
