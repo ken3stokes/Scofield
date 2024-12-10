@@ -1,61 +1,52 @@
 # SCOFIELD - Strategic Goal Planning System
 
-A sophisticated goal management system inspired by Michael Scofield's methodical approach to planning and execution.
+Version 1.1.0
+
+A private, browser-based goal management system inspired by Michael Scofield's strategic approach.
 
 ## Features
 
-- **Strategic Planning**: Break down complex goals into actionable steps
-- **Visual Analytics**: Track progress with intuitive charts and metrics
-- **Time Management**: Execute with precision and perfect timing
-- **Progress Tracking**: Monitor achievements with detailed reporting
+- Create and manage SMART goals
+- Private data storage using IndexedDB (all data stays on your device)
+- Export/Import functionality for data backup
+- Mobile-responsive design
+- Goal progress tracking
+- Task management for each goal
+- Visual analytics and reports
 
-## Technology Stack
+## Recent Updates (v1.1.0)
 
-- HTML5
-- CSS3 (with custom animations)
-- JavaScript
-- Bootstrap 5
-- Chart.js for analytics
-- Local Storage for data persistence
+- Added Export/Import functionality for data backup
+- Improved mobile responsiveness
+- Enhanced UI spacing and readability
+- Added privacy-focused local storage
+
+## Privacy Features
+
+- All data is stored locally in your browser
+- No server-side storage or transmission
+- Backup system for data preservation
+- No external dependencies for data storage
 
 ## Getting Started
 
-1. Clone the repository
-```bash
-git clone [your-repository-url]
-```
+1. Open `index.html` in your web browser
+2. Start creating your SMART goals
+3. Use the export feature regularly to backup your data
 
-2. Open `index.html` in your browser to launch the application
+## Backup & Restore
 
-## Project Structure
+- Click "Export" to save your goals as a JSON file
+- Click "Import" to restore from a backup file
+- Backups are dated for easy management
 
-```
-├── css/
-│   ├── style.css
-│   └── themes.css
-├── js/
-│   └── script.js
-├── index.html      # Main application
-├── home.html       # Landing page
-└── themes.html     # Theme preview
-```
+## Browser Support
 
-## Design Philosophy
-
-The application's design is inspired by Michael Scofield's characteristics:
-- Meticulous planning
-- Strategic thinking
-- Precise execution
-- Adaptability
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+- Chrome (Recommended)
+- Firefox
+- Edge
+- Safari
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT License - Feel free to modify for personal use

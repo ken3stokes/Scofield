@@ -168,6 +168,82 @@
     -webkit-overflow-scrolling: touch;
 }
 
+/* Mobile-First Tables */
+@media (max-width: 768px) {
+    .goal-card {
+        margin-bottom: 1rem;
+    }
+
+    .goal-card .card-body {
+        padding: 1rem;
+    }
+
+    .goal-card .card-title {
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .goal-card .badge {
+        font-size: 0.8rem;
+        padding: 0.4em 0.6em;
+        margin-bottom: 0.3rem;
+        display: inline-block;
+    }
+
+    .goal-card .btn-group,
+    .goal-card .btn-group-vertical {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        width: 100%;
+    }
+
+    .goal-card .btn {
+        width: 100%;
+        margin: 0;
+        padding: 0.5rem;
+    }
+
+    .goal-card .progress {
+        height: 1rem;
+        margin: 0.5rem 0;
+    }
+
+    .goal-card .d-flex {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+
+    .goal-card .text-muted {
+        margin-top: 0.5rem;
+    }
+
+    #goalsContainer .table td,
+    #goalsContainer .table th {
+        padding: 1rem 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    #goalsContainer .table {
+        margin-bottom: 0;
+    }
+
+    #goalsContainer .btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    #goalsContainer .btn {
+        width: 100%;
+        margin: 0;
+    }
+    
+    #goalsContainer .progress {
+        min-width: 100px;
+    }
+}
+
 /* Mobile-First Forms */
 .form-control {
     font-size: clamp(0.875rem, 2vw, 1rem);

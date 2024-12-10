@@ -515,3 +515,110 @@ function exportReport() {
     link.click();
     document.body.removeChild(link);
 }
+
+// Export Goals
+function exportGoals() {
+    const transaction = db.transaction(["goals", "tasks"], "readonly");
+    const goalStore = transaction.objectStore("goals");
+    const taskStore = transaction.objectStore("tasks");
+    
+    const goalsRequest = goalStore.getAll();
+    const tasksRequest = taskStore.getAll();
+    
+    goalsRequest.onsuccess = () => {
+        tasksRequest.onsuccess = () => {
+            const exportData = {
+                goals: goalsRequest.result,
+                tasks: tasksRequest.result,
+                exportDate: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `scofield-goals-backup-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        };
+        
+        tasksRequest.onerror = (error) => {
+            console.error("Error exporting tasks:", error);
+            alert("Error exporting tasks");
+        };
+    };
+    
+    goalsRequest.onerror = (error) => {
+        console.error("Error exporting goals:", error);
+        alert("Error exporting goals");
+    };
+}
+
+// Import Goals
+function importGoals() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = (event) => {
+            try {
+                const data = JSON.parse(event.target.result);
+                console.log("Imported data:", data); // Debug log
+                
+                if (!data.goals || !Array.isArray(data.goals)) {
+                    throw new Error("Invalid backup file format");
+                }
+                
+                const transaction = db.transaction(["goals", "tasks"], "readwrite");
+                const goalStore = transaction.objectStore("goals");
+                const taskStore = transaction.objectStore("tasks");
+                
+                // Clear existing data
+                goalStore.clear().onsuccess = () => {
+                    taskStore.clear().onsuccess = () => {
+                        // Import goals
+                        data.goals.forEach(goal => {
+                            goalStore.add(goal);
+                        });
+                        
+                        // Import tasks
+                        if (data.tasks && Array.isArray(data.tasks)) {
+                            data.tasks.forEach(task => {
+                                taskStore.add(task);
+                            });
+                        }
+                    };
+                };
+                
+                transaction.oncomplete = () => {
+                    alert("Goals and tasks imported successfully!");
+                    loadGoals();
+                };
+                
+                transaction.onerror = (error) => {
+                    console.error("Transaction error:", error);
+                    alert("Error importing goals: " + error.target.error);
+                };
+                
+            } catch (error) {
+                console.error("Import error:", error);
+                alert("Error importing goals. Please make sure you selected a valid backup file.");
+            }
+        };
+        
+        reader.onerror = (error) => {
+            console.error("File reading error:", error);
+            alert("Error reading the backup file.");
+        };
+        
+        reader.readAsText(file);
+    };
+    
+    input.click();
+}
