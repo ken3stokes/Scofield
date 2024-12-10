@@ -1,0 +1,133 @@
+/* Common Theme Elements */
+.brand-logo {
+    font-family: 'Roboto Mono', monospace;
+    letter-spacing: 2px;
+}
+
+/* Tattoo Theme */
+.theme-tattoo {
+    --primary-color: #1A237E;
+    --secondary-color: #3949AB;
+    --accent-color: #5C6BC0;
+    --background-color: #E8EAF6;
+}
+
+.theme-tattoo .navbar {
+    background: var(--primary-color) !important;
+    border-bottom: 1px solid var(--accent-color);
+}
+
+.theme-tattoo .hero-section {
+    background: var(--primary-color);
+    color: white;
+    position: relative;
+    overflow: hidden;
+    padding: 6rem 0;
+}
+
+.theme-tattoo .hero-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        linear-gradient(45deg, rgba(92, 107, 192, 0.1) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(92, 107, 192, 0.1) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(92, 107, 192, 0.1) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(92, 107, 192, 0.1) 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+
+/* Feature Cards */
+.feature-card {
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+}
+
+.feature-card .card-body {
+    padding: 2rem;
+}
+
+/* Progress Bars */
+.progress {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 50px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    background: linear-gradient(45deg, var(--secondary-color), var(--accent-color));
+    transition: width 1.5s ease-in-out;
+}
+
+/* Buttons */
+.btn-theme {
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 0.75rem 2rem;
+    border-radius: 50px;
+    transition: all 0.3s ease;
+}
+
+.btn-theme:hover {
+    background: var(--secondary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Quote Card */
+.theme-tattoo .card.bg-dark {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)) !important;
+    border: none;
+    border-radius: 12px;
+}
+
+/* Numbered Steps */
+[class^="bi-"].me-2 {
+    color: var(--accent-color);
+}
+
+/* Hero Checklist */
+.hero-section .bi-check-circle-fill {
+    color: var(--accent-color);
+}
+
+/* Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.feature-card, .hero-section h1, .hero-section p {
+    animation: fadeInUp 0.6s ease-out forwards;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .hero-section {
+        padding: 4rem 0;
+    }
+    
+    .feature-card {
+        margin-bottom: 1rem;
+    }
+}
