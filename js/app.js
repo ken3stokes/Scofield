@@ -3,36 +3,53 @@ let db;
 const dbName = "SMARTGoalsDB";
 const dbVersion = 1;
 
-const request = indexedDB.open(dbName, dbVersion);
+function initializeDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(dbName, dbVersion);
 
-request.onerror = (event) => {
-    console.error("Database error:", event.target.error);
-};
+        request.onerror = (event) => {
+            console.error("Database error:", event.target.error);
+            reject("Error opening database");
+        };
 
-request.onupgradeneeded = (event) => {
-    db = event.target.result;
-    
-    // Create goals object store
-    if (!db.objectStoreNames.contains("goals")) {
-        const goalsStore = db.createObjectStore("goals", { keyPath: "id", autoIncrement: true });
-        goalsStore.createIndex("title", "title", { unique: false });
-        goalsStore.createIndex("status", "status", { unique: false });
-        goalsStore.createIndex("type", "type", { unique: false });
+        request.onupgradeneeded = (event) => {
+            db = event.target.result;
+            
+            // Create goals object store if it doesn't exist
+            if (!db.objectStoreNames.contains("goals")) {
+                const goalsStore = db.createObjectStore("goals", { keyPath: "id", autoIncrement: true });
+                goalsStore.createIndex("title", "title", { unique: false });
+                goalsStore.createIndex("status", "status", { unique: false });
+                goalsStore.createIndex("type", "type", { unique: false });
+            }
+            
+            // Create tasks object store if it doesn't exist
+            if (!db.objectStoreNames.contains("tasks")) {
+                const tasksStore = db.createObjectStore("tasks", { keyPath: "id", autoIncrement: true });
+                tasksStore.createIndex("goalId", "goalId", { unique: false });
+                tasksStore.createIndex("completed", "completed", { unique: false });
+            }
+        };
+
+        request.onsuccess = (event) => {
+            db = event.target.result;
+            console.log("Database opened successfully");
+            resolve(db);
+        };
+    });
+}
+
+// Wait for DOM and DB to be ready
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        await initializeDB();
+        loadGoals();
+        console.log("Application initialized successfully");
+    } catch (error) {
+        console.error("Failed to initialize application:", error);
+        alert("There was an error initializing the application. Please refresh the page.");
     }
-    
-    // Create tasks object store
-    if (!db.objectStoreNames.contains("tasks")) {
-        const tasksStore = db.createObjectStore("tasks", { keyPath: "id", autoIncrement: true });
-        tasksStore.createIndex("goalId", "goalId", { unique: false });
-        tasksStore.createIndex("completed", "completed", { unique: false });
-    }
-};
-
-request.onsuccess = (event) => {
-    db = event.target.result;
-    console.log("Database opened successfully");
-    loadGoals();
-};
+});
 
 // SMART Goal Form Handler
 document.getElementById("smartGoalForm").addEventListener("submit", (e) => {
@@ -514,10 +531,16 @@ function exportReport() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
 }
 
 // Export Goals
 function exportGoals() {
+    if (!db) {
+        alert("Database not ready. Please try again in a moment.");
+        return;
+    }
+
     const transaction = db.transaction(["goals", "tasks"], "readonly");
     const goalStore = transaction.objectStore("goals");
     const taskStore = transaction.objectStore("tasks");
@@ -546,18 +569,23 @@ function exportGoals() {
         
         tasksRequest.onerror = (error) => {
             console.error("Error exporting tasks:", error);
-            alert("Error exporting tasks");
+            alert("Error exporting tasks. Please try again.");
         };
     };
     
     goalsRequest.onerror = (error) => {
         console.error("Error exporting goals:", error);
-        alert("Error exporting goals");
+        alert("Error exporting goals. Please try again.");
     };
 }
 
 // Import Goals
 function importGoals() {
+    if (!db) {
+        alert("Database not ready. Please try again in a moment.");
+        return;
+    }
+
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".json";
@@ -569,7 +597,7 @@ function importGoals() {
         reader.onload = (event) => {
             try {
                 const data = JSON.parse(event.target.result);
-                console.log("Imported data:", data); // Debug log
+                console.log("Importing data:", data);
                 
                 if (!data.goals || !Array.isArray(data.goals)) {
                     throw new Error("Invalid backup file format");
@@ -587,7 +615,7 @@ function importGoals() {
                             goalStore.add(goal);
                         });
                         
-                        // Import tasks
+                        // Import tasks if they exist
                         if (data.tasks && Array.isArray(data.tasks)) {
                             data.tasks.forEach(task => {
                                 taskStore.add(task);
