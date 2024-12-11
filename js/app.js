@@ -68,17 +68,38 @@ document.getElementById("smartGoalForm").addEventListener("submit", (e) => {
         timeBound: document.getElementById("timeBound").value,
         status: "active",
         progress: 0,
-        createdAt: new Date().toISOString(),
-        tasks: []
+        createdAt: new Date().toISOString()
     };
+    
+    const form = e.target;
+    const isEditMode = form.dataset.editMode === 'true';
+    const editGoalId = parseInt(form.dataset.editGoalId);
     
     const transaction = db.transaction(["goals"], "readwrite");
     const store = transaction.objectStore("goals");
     
-    store.add(goal).onsuccess = () => {
-        document.getElementById("smartGoalForm").reset();
-        loadGoals();
-    };
+    if (isEditMode) {
+        // Get existing goal to preserve certain properties
+        store.get(editGoalId).onsuccess = (event) => {
+            const existingGoal = event.target.result;
+            goal.id = editGoalId;
+            goal.progress = existingGoal.progress;
+            goal.status = existingGoal.status;
+            goal.createdAt = existingGoal.createdAt;
+            
+            store.put(goal).onsuccess = () => {
+                form.dataset.editMode = 'false';
+                form.dataset.editGoalId = '';
+                form.reset();
+                loadGoals();
+            };
+        };
+    } else {
+        store.add(goal).onsuccess = () => {
+            form.reset();
+            loadGoals();
+        };
+    }
 });
 
 // Load and Display Goals
@@ -138,6 +159,12 @@ function createGoalElement(goal) {
                 <button class="btn btn-sm btn-primary" onclick="viewGoalDetails(${goal.id})">
                     View Details
                 </button>
+                <button class="btn btn-sm btn-warning" onclick="editGoal(${goal.id})">
+                    Edit
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="deleteGoal(${goal.id})">
+                    Delete
+                </button>
                 <button class="btn btn-sm ${goal.status === "completed" ? "btn-secondary" : "btn-success"}"
                         onclick="toggleGoalStatus(${goal.id})">
                     ${goal.status === "completed" ? "Reopen" : "Mark Complete"}
@@ -147,6 +174,70 @@ function createGoalElement(goal) {
     `;
     
     return div;
+}
+
+// Delete Goal
+function deleteGoal(goalId) {
+    if (!confirm('Are you sure you want to delete this goal? This action cannot be undone.')) {
+        return;
+    }
+
+    const transaction = db.transaction(['goals', 'tasks'], 'readwrite');
+    const goalStore = transaction.objectStore('goals');
+    const taskStore = transaction.objectStore('tasks');
+    const taskIndex = taskStore.index('goalId');
+
+    // First, delete all tasks associated with this goal
+    const taskRequest = taskIndex.getAll(goalId);
+    
+    taskRequest.onsuccess = (event) => {
+        const tasks = event.target.result;
+        tasks.forEach(task => {
+            taskStore.delete(task.id);
+        });
+
+        // Then delete the goal
+        goalStore.delete(goalId).onsuccess = () => {
+            loadGoals();
+            const modal = bootstrap.Modal.getInstance(document.getElementById('goalDetailsModal'));
+            if (modal) {
+                modal.hide();
+            }
+        };
+    };
+}
+
+// Edit Goal
+function editGoal(goalId) {
+    const transaction = db.transaction(['goals'], 'readonly');
+    const store = transaction.objectStore('goals');
+    
+    store.get(goalId).onsuccess = (event) => {
+        const goal = event.target.result;
+        
+        // Populate form with existing goal data
+        document.getElementById('goalTitle').value = goal.title;
+        document.getElementById('goalType').value = goal.type;
+        document.getElementById('specific').value = goal.specific;
+        document.getElementById('measurable').value = goal.measurable;
+        document.getElementById('achievable').value = goal.achievable;
+        document.getElementById('relevant').value = goal.relevant;
+        document.getElementById('timeBound').value = goal.timeBound.split('T')[0];
+        
+        // Update form submission handler
+        const form = document.getElementById('smartGoalForm');
+        form.dataset.editMode = 'true';
+        form.dataset.editGoalId = goalId;
+        
+        // Close the details modal if it's open
+        const detailsModal = bootstrap.Modal.getInstance(document.getElementById('goalDetailsModal'));
+        if (detailsModal) {
+            detailsModal.hide();
+        }
+        
+        // Scroll to the form
+        form.scrollIntoView({ behavior: 'smooth' });
+    };
 }
 
 // View Goal Details
