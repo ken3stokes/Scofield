@@ -49,13 +49,7 @@
 }
 
 .progress {
-    height: 1rem;
-    margin: 0.5rem 0;
-    border-radius: 0.5rem;
-}
-
-.progress-bar {
-    transition: width 0.5s ease;
+    height: 0.5rem;
 }
 
 .smart-criteria {
@@ -149,25 +143,4 @@
 
 .goal-card .badge {
     font-size: 0.85rem;
-}
-
-/* Report Modal Styling */
-#reportsModal .modal-dialog {
-    max-width: 95%;
-    margin: 1.75rem auto;
-}
-
-#reportsModal .modal-content {
-    max-height: 90vh;
-}
-
-/* Chart styling */
-.chart-container {
-    position: relative;
-    height: 300px;
-    margin: 0 auto;
-}
-
-#goalTypeChart {
-    max-height: 250px !important;
 }

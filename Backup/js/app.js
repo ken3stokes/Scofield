@@ -462,106 +462,22 @@ document.getElementById("viewCompleted").addEventListener("click", () => loadGoa
 
 // Show Reports
 function showReports() {
-    if (typeof bootstrap === 'undefined') {
-        console.error('Bootstrap is not loaded');
-        alert('Error: Could not show reports. Please refresh the page and try again.');
-        return;
-    }
-
-    const reportsModal = document.getElementById('reportsModal');
-    if (!reportsModal) {
-        console.error('Reports modal element not found');
-        alert('Error: Could not find reports modal. Please refresh the page and try again.');
-        return;
-    }
-
-    // Initialize charts before showing modal
-    initializeCharts();
-    
-    // Show the modal
-    const modal = new bootstrap.Modal(reportsModal);
-    modal.show();
-    
-    // Generate reports after modal is shown
+    const modal = new bootstrap.Modal(document.getElementById('reportsModal'));
     generateReports();
-}
-
-// Initialize Charts
-function initializeCharts() {
-    // Initialize Status Chart
-    const statusCtx = document.getElementById('goalStatusChart');
-    if (window.statusChart) {
-        window.statusChart.destroy();
-    }
-    window.statusChart = new Chart(statusCtx, {
-        type: 'doughnut',
-        data: {
-            labels: ['In Progress', 'Completed', 'Overdue'],
-            datasets: [{
-                data: [0, 0, 0], // Initial empty data
-                backgroundColor: ['#0d6efd', '#198754', '#dc3545']
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            }
-        }
-    });
-
-    // Initialize Type Chart
-    const typeCtx = document.getElementById('goalTypeChart');
-    if (window.typeChart) {
-        window.typeChart.destroy();
-    }
-    window.typeChart = new Chart(typeCtx, {
-        type: 'bar',
-        data: {
-            labels: [],
-            datasets: [{
-                label: 'Number of Goals',
-                data: [],
-                backgroundColor: '#0d6efd'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1
-                    }
-                }
-            }
-        }
-    });
+    modal.show();
 }
 
 // Generate Reports
-async function generateReports() {
-    try {
-        const transaction = db.transaction(["goals", "tasks"], "readonly");
-        const goalStore = transaction.objectStore("goals");
-        const taskStore = transaction.objectStore("tasks");
+function generateReports() {
+    const transaction = db.transaction(["goals", "tasks"], "readonly");
+    const goalStore = transaction.objectStore("goals");
+    const taskStore = transaction.objectStore("tasks");
+    
+    const request = goalStore.getAll();
+    
+    request.onsuccess = async (event) => {
+        const goals = event.target.result;
         
-        // Get all goals
-        const goals = await new Promise((resolve, reject) => {
-            const request = goalStore.getAll();
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error);
-        });
-
         // Prepare data for charts
         const statusData = {
             'active': 0,
@@ -570,12 +486,13 @@ async function generateReports() {
         };
         
         const typeData = {};
+        
+        // Prepare table data and count statistics
         const tableBody = document.querySelector("#goalSummaryTable tbody");
         tableBody.innerHTML = "";
         
-        // Process each goal
         for (const goal of goals) {
-            // Determine status
+            // Count by status
             const dueDate = new Date(goal.timeBound);
             const isOverdue = dueDate < new Date() && goal.status !== "completed";
             const status = isOverdue ? 'overdue' : goal.status;
@@ -585,217 +502,193 @@ async function generateReports() {
             typeData[goal.type] = (typeData[goal.type] || 0) + 1;
             
             // Get tasks for this goal
-            const tasks = await new Promise((resolve, reject) => {
-                const taskIndex = taskStore.index("goalId");
-                const request = taskIndex.getAll(goal.id);
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error);
+            const taskIndex = taskStore.index("goalId");
+            const taskRequest = taskIndex.getAll(goal.id);
+            
+            await new Promise((resolve) => {
+                taskRequest.onsuccess = (event) => {
+                    const tasks = event.target.result;
+                    const completedTasks = tasks.filter(task => task.completed).length;
+                    
+                    // Add row to table
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td>${goal.type}</td>
+                        <td>${goal.title}</td>
+                        <td>
+                            <span class="badge ${status === 'completed' ? 'bg-success' : status === 'overdue' ? 'bg-danger' : 'bg-primary'}">
+                                ${status.charAt(0).toUpperCase() + status.slice(1)}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar" role="progressbar" style="width: ${goal.progress}%">
+                                    ${goal.progress}%
+                                </div>
+                            </div>
+                        </td>
+                        <td>${new Date(goal.timeBound).toLocaleDateString()}</td>
+                        <td>${completedTasks}/${tasks.length}</td>
+                    `;
+                    tableBody.appendChild(row);
+                    resolve();
+                };
             });
-            
-            const completedTasks = tasks.filter(task => task.completed).length;
-            
-            // Add row to table
-            const row = document.createElement("tr");
-            row.innerHTML = `
-                <td>${goal.type}</td>
-                <td>${goal.title}</td>
-                <td>
-                    <span class="badge ${status === 'completed' ? 'bg-success' : status === 'overdue' ? 'bg-danger' : 'bg-primary'}">
-                        ${status.charAt(0).toUpperCase() + status.slice(1)}
-                    </span>
-                </td>
-                <td>
-                    <div class="progress">
-                        <div class="progress-bar" role="progressbar" style="width: ${goal.progress}%">
-                            ${goal.progress}%
-                        </div>
-                    </div>
-                </td>
-                <td>${new Date(goal.timeBound).toLocaleDateString()}</td>
-                <td>${completedTasks}/${tasks.length}</td>
-            `;
-            tableBody.appendChild(row);
         }
         
-        // Update Status Chart
-        window.statusChart.data.datasets[0].data = [
-            statusData.active,
-            statusData.completed,
-            statusData.overdue
-        ];
-        window.statusChart.update();
+        // Create Status Chart
+        const statusCtx = document.getElementById('goalStatusChart').getContext('2d');
+        if (window.statusChart) window.statusChart.destroy();
+        window.statusChart = new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['In Progress', 'Completed', 'Overdue'],
+                datasets: [{
+                    data: [statusData.active, statusData.completed, statusData.overdue],
+                    backgroundColor: ['#0d6efd', '#198754', '#dc3545']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
         
-        // Update Type Chart
-        window.typeChart.data.labels = Object.keys(typeData);
-        window.typeChart.data.datasets[0].data = Object.values(typeData);
-        window.typeChart.update();
-        
-    } catch (error) {
-        console.error("Error generating reports:", error);
-        alert("Error generating reports. Please try again.");
-    }
+        // Create Type Chart
+        const typeCtx = document.getElementById('goalTypeChart').getContext('2d');
+        if (window.typeChart) window.typeChart.destroy();
+        window.typeChart = new Chart(typeCtx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(typeData),
+                datasets: [{
+                    label: 'Number of Goals',
+                    data: Object.values(typeData),
+                    backgroundColor: '#0d6efd'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    };
 }
 
-// Export Report as PDF
-function exportReportAsPDF() {
-    const { jsPDF } = window.jspdf;
-    if (!jsPDF) {
-        alert('PDF library not loaded. Please refresh the page.');
-        return;
-    }
-
-    // Create PDF
-    const doc = new jsPDF('p', 'mm', 'a4');
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 20;
-    let yPosition = margin;
-
-    // Add header
-    doc.setFontSize(24);
-    doc.setTextColor(13, 110, 253); // Bootstrap primary blue
-    doc.text('SCOFIELD', margin, yPosition);
-    yPosition += 10;
-
-    doc.setFontSize(16);
-    doc.text('Goal Execution Report', margin, yPosition);
-    yPosition += 15;
-
-    // Add date
-    doc.setFontSize(10);
-    doc.setTextColor(108, 117, 125); // Bootstrap gray
-    doc.text(`Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, margin, yPosition);
-    yPosition += 10;
-
-    // Add horizontal line
-    doc.setDrawColor(222, 226, 230);
-    doc.line(margin, yPosition, pageWidth - margin, yPosition);
-    yPosition += 15;
-
-    // Add Goal Status Summary
-    doc.setFontSize(14);
-    doc.setTextColor(33, 37, 41); // Bootstrap dark
-    doc.text('Goal Status Summary', margin, yPosition);
-    yPosition += 10;
-
-    // Get data from the table
+// Export Report
+function exportReport() {
     const table = document.getElementById('goalSummaryTable');
-    if (table) {
-        const rows = table.querySelectorAll('tr');
-        doc.setFontSize(10);
-        rows.forEach(row => {
-            const cells = row.querySelectorAll('td, th');
-            let xPosition = margin;
-            const cellWidth = (pageWidth - (margin * 2)) / cells.length;
-            
-            cells.forEach(cell => {
-                doc.text(cell.textContent.trim(), xPosition, yPosition);
-                xPosition += cellWidth;
-            });
-            yPosition += 8;
+    let csv = [];
+    
+    // Get headers
+    const headers = [];
+    const headerCells = table.querySelectorAll('thead th');
+    headerCells.forEach(cell => headers.push(cell.textContent));
+    csv.push(headers.join(','));
+    
+    // Get rows
+    const rows = table.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        const rowData = [];
+        row.querySelectorAll('td').forEach(cell => {
+            // Clean up the cell data
+            let text = cell.textContent.trim();
+            // Remove any commas to avoid CSV issues
+            text = text.replace(/,/g, ';');
+            rowData.push(text);
         });
-    }
-    yPosition += 15;
-
-    // Add Goal Type Distribution
-    doc.setFontSize(14);
-    doc.text('Goal Type Distribution', margin, yPosition);
-    yPosition += 10;
-
-    // Get data from charts
-    const typeChart = Chart.getChart('goalTypeChart');
-    if (typeChart) {
-        const data = typeChart.data;
-        doc.setFontSize(10);
-        data.labels.forEach((label, index) => {
-            const value = data.datasets[0].data[index];
-            const percentage = ((value / data.datasets[0].data.reduce((a, b) => a + b, 0)) * 100).toFixed(1);
-            doc.text(`${label}: ${percentage}%`, margin, yPosition);
-            yPosition += 8;
-        });
-    }
-    yPosition += 15;
-
-    // Add footer
-    doc.setFontSize(8);
-    doc.setTextColor(108, 117, 125);
-    doc.text('SCOFIELD Goal Execution System - Confidential Report', margin, pageHeight - 10);
-    doc.text(`Page 1 of 1`, pageWidth - margin, pageHeight - 10, { align: 'right' });
-
-    // Save the PDF
-    doc.save('SCOFIELD-Goal-Report.pdf');
+        csv.push(rowData.join(','));
+    });
+    
+    // Create and download CSV file
+    const csvContent = "data:text/csv;charset=utf-8," + csv.join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `smart_goals_report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
 }
 
-// For backward compatibility
-const exportReport = exportReportAsPDF;
-
-// Export Goals as JSON backup
+// Export Goals
 async function exportGoals() {
     try {
         const transaction = db.transaction(["goals", "tasks"], "readonly");
         const goalStore = transaction.objectStore("goals");
         const taskStore = transaction.objectStore("tasks");
         
-        // Get all goals and tasks
         const goals = await new Promise((resolve, reject) => {
-            goalStore.getAll().onsuccess = (event) => resolve(event.target.result);
+            const request = goalStore.getAll();
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
         });
         
         const tasks = await new Promise((resolve, reject) => {
-            taskStore.getAll().onsuccess = (event) => resolve(event.target.result);
+            const request = taskStore.getAll();
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
         });
         
-        // Create backup object
-        const backup = {
-            version: "1.0",
-            timestamp: new Date().toISOString(),
-            data: {
-                goals: goals,
-                tasks: tasks
-            }
-        };
-        
-        // Convert to JSON and create blob
-        const jsonString = JSON.stringify(backup, null, 2);
-        const blob = new Blob([jsonString], { type: 'application/json' });
-        
-        // Create download link
+        const data = { goals, tasks };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `scofield_backup_${new Date().toISOString().split('T')[0]}.json`;
-        
-        // Trigger download
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const date = new Date().toISOString().split('T')[0];
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `scofield-goals-backup-${date}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(url);
         
         // Update last export date
-        localStorage.setItem('lastExportDate', new Date().toISOString());
+        lastExportDate = new Date().toISOString();
+        localStorage.setItem('lastExportDate', lastExportDate);
         
     } catch (error) {
-        console.error("Error exporting goals:", error);
+        console.error("Export error:", error);
         alert("Error exporting goals. Please try again.");
     }
 }
 
-// Show Instructions
-function showInstructions() {
-    if (typeof bootstrap === 'undefined') {
-        console.error('Bootstrap is not loaded');
-        alert('Error: Could not show instructions. Please refresh the page and try again.');
-        return;
-    }
-    const instructionsModal = document.getElementById("instructionsModal");
-    if (!instructionsModal) {
-        console.error('Instructions modal element not found');
-        alert('Error: Could not find instructions modal. Please refresh the page and try again.');
-        return;
-    }
-    const modal = new bootstrap.Modal(instructionsModal);
-    modal.show();
+// Check if backup is needed
+function isBackupNeeded() {
+    if (!lastExportDate) return true;
+    
+    const lastExport = new Date(lastExportDate);
+    const now = new Date();
+    const daysSinceLastExport = Math.floor((now - lastExport) / (1000 * 60 * 60 * 24));
+    
+    // Return true if it's been more than 7 days since last export
+    return daysSinceLastExport > 7;
 }
+
+// Add beforeunload event listener
+window.addEventListener('beforeunload', (event) => {
+    if (isBackupNeeded()) {
+        const message = 'You haven\'t backed up your goals in a while. Are you sure you want to leave?';
+        event.returnValue = message;
+        return message;
+    }
+});
 
 // Import Goals
 function importGoals() {
@@ -869,23 +762,19 @@ function importGoals() {
     input.click();
 }
 
-// Check if backup is needed
-function isBackupNeeded() {
-    if (!lastExportDate) return true;
-    
-    const lastExport = new Date(lastExportDate);
-    const now = new Date();
-    const daysSinceLastExport = Math.floor((now - lastExport) / (1000 * 60 * 60 * 24));
-    
-    // Return true if it's been more than 7 days since last export
-    return daysSinceLastExport > 7;
-}
-
-// Add beforeunload event listener
-window.addEventListener('beforeunload', (event) => {
-    if (isBackupNeeded()) {
-        const message = 'You haven\'t backed up your goals in a while. Are you sure you want to leave?';
-        event.returnValue = message;
-        return message;
+// Show Instructions
+function showInstructions() {
+    if (typeof bootstrap === 'undefined') {
+        console.error('Bootstrap is not loaded');
+        alert('Error: Could not show instructions. Please refresh the page and try again.');
+        return;
     }
-});
+    const instructionsModal = document.getElementById("instructionsModal");
+    if (!instructionsModal) {
+        console.error('Instructions modal element not found');
+        alert('Error: Could not find instructions modal. Please refresh the page and try again.');
+        return;
+    }
+    const modal = new bootstrap.Modal(instructionsModal);
+    modal.show();
+}
