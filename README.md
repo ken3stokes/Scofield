@@ -1,6 +1,6 @@
 # SCOFIELD - Strategic Goal Planning System
 
-Version 1.1.0
+Version 1.2.0
 
 A private, browser-based goal management system inspired by Michael Scofield's strategic approach.
 
@@ -13,13 +13,18 @@ A private, browser-based goal management system inspired by Michael Scofield's s
 - Goal progress tracking
 - Task management for each goal
 - Visual analytics and reports
+- PDF report generation
 
-## Recent Updates (v1.1.0)
+## Recent Updates (v1.2.0)
 
-- Added Export/Import functionality for data backup
-- Improved mobile responsiveness
-- Enhanced UI spacing and readability
-- Added privacy-focused local storage
+- Simplified PDF report generation for better reliability
+- Enhanced report visualization with clear charts
+- Improved overall system stability
+- Previous v1.1.0 updates:
+  - Added Export/Import functionality for data backup
+  - Improved mobile responsiveness
+  - Enhanced UI spacing and readability
+  - Added privacy-focused local storage
 
 ## Privacy Features
 
@@ -33,6 +38,12 @@ A private, browser-based goal management system inspired by Michael Scofield's s
 1. Open `index.html` in your web browser
 2. Start creating your SMART goals
 3. Use the export feature regularly to backup your data
+
+## Reports and Analytics
+
+- Generate PDF reports of your goals and progress
+- View goal distribution by status and type
+- Track completion rates and progress
 
 ## Backup & Restore
 
