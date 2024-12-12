@@ -637,93 +637,117 @@ async function generateReports() {
 }
 
 // Export Report as PDF
-function exportReportAsPDF() {
-    const { jsPDF } = window.jspdf;
-    if (!jsPDF) {
-        alert('PDF library not loaded. Please refresh the page.');
-        return;
-    }
+async function exportReportAsPDF() {
+    try {
+        const { jsPDF } = window.jspdf;
+        if (!jsPDF) {
+            alert('PDF library not loaded. Please refresh the page.');
+            return;
+        }
 
-    // Create PDF
-    const doc = new jsPDF('p', 'mm', 'a4');
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 20;
-    let yPosition = margin;
+        // Create PDF
+        const doc = new jsPDF('p', 'mm', 'a4');
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 20;
+        let yPosition = margin;
 
-    // Add header
-    doc.setFontSize(24);
-    doc.setTextColor(13, 110, 253); // Bootstrap primary blue
-    doc.text('SCOFIELD', margin, yPosition);
-    yPosition += 10;
+        // Add header
+        doc.setFontSize(24);
+        doc.setTextColor(13, 110, 253); // Bootstrap primary blue
+        doc.text('SCOFIELD', margin, yPosition);
+        yPosition += 10;
 
-    doc.setFontSize(16);
-    doc.text('Goal Execution Report', margin, yPosition);
-    yPosition += 15;
+        doc.setFontSize(16);
+        doc.text('Goal Execution Report', margin, yPosition);
+        yPosition += 15;
 
-    // Add date
-    doc.setFontSize(10);
-    doc.setTextColor(108, 117, 125); // Bootstrap gray
-    doc.text(`Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, margin, yPosition);
-    yPosition += 10;
-
-    // Add horizontal line
-    doc.setDrawColor(222, 226, 230);
-    doc.line(margin, yPosition, pageWidth - margin, yPosition);
-    yPosition += 15;
-
-    // Add Goal Status Summary
-    doc.setFontSize(14);
-    doc.setTextColor(33, 37, 41); // Bootstrap dark
-    doc.text('Goal Status Summary', margin, yPosition);
-    yPosition += 10;
-
-    // Get data from the table
-    const table = document.getElementById('goalSummaryTable');
-    if (table) {
-        const rows = table.querySelectorAll('tr');
+        // Add date
         doc.setFontSize(10);
-        rows.forEach(row => {
-            const cells = row.querySelectorAll('td, th');
-            let xPosition = margin;
-            const cellWidth = (pageWidth - (margin * 2)) / cells.length;
-            
-            cells.forEach(cell => {
-                doc.text(cell.textContent.trim(), xPosition, yPosition);
-                xPosition += cellWidth;
+        doc.setTextColor(108, 117, 125); // Bootstrap gray
+        doc.text(`Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, margin, yPosition);
+        yPosition += 10;
+
+        // Add horizontal line
+        doc.setDrawColor(222, 226, 230);
+        doc.line(margin, yPosition, pageWidth - margin, yPosition);
+        yPosition += 15;
+
+        // Convert charts to images
+        const statusChart = document.getElementById('goalStatusChart');
+        const typeChart = document.getElementById('goalTypeChart');
+
+        if (statusChart && typeChart) {
+            // Status Chart Section
+            doc.setFontSize(14);
+            doc.setTextColor(33, 37, 41);
+            doc.text('Goals by Status', margin, yPosition);
+            yPosition += 8;
+
+            const statusCanvas = await html2canvas(statusChart, {
+                scale: 2,
+                backgroundColor: null
             });
-            yPosition += 8;
-        });
+            const statusImgData = statusCanvas.toDataURL('image/png');
+            const statusChartWidth = 80;
+            const statusChartHeight = 60;
+            doc.addImage(statusImgData, 'PNG', margin, yPosition, statusChartWidth, statusChartHeight);
+
+            // Type Chart (side by side)
+            doc.text('Goals by Type', pageWidth - margin - 80, yPosition - 8);
+            const typeCanvas = await html2canvas(typeChart, {
+                scale: 2,
+                backgroundColor: null
+            });
+            const typeImgData = typeCanvas.toDataURL('image/png');
+            doc.addImage(typeImgData, 'PNG', pageWidth - margin - 80, yPosition, statusChartWidth, statusChartHeight);
+
+            yPosition += statusChartHeight + 15;
+        }
+
+        // Add Goal Summary Table
+        doc.setFontSize(14);
+        doc.text('Goal Summary', margin, yPosition);
+        yPosition += 10;
+
+        const table = document.getElementById('goalSummaryTable');
+        if (table) {
+            doc.setFontSize(10);
+            const rows = table.querySelectorAll('tr');
+            const cellPadding = 5;
+            const cellWidth = (pageWidth - (margin * 2)) / 3; // Divide by number of columns
+
+            rows.forEach((row, rowIndex) => {
+                const cells = row.querySelectorAll('td, th');
+                
+                // Set background for header row
+                if (rowIndex === 0) {
+                    doc.setFillColor(240, 240, 240);
+                    doc.rect(margin, yPosition - 5, pageWidth - (margin * 2), 8, 'F');
+                    doc.setTextColor(33, 37, 41);
+                }
+
+                cells.forEach((cell, cellIndex) => {
+                    const xPosition = margin + (cellWidth * cellIndex);
+                    doc.text(cell.textContent.trim(), xPosition + cellPadding, yPosition);
+                });
+
+                yPosition += 8;
+            });
+        }
+
+        // Add footer
+        doc.setFontSize(8);
+        doc.setTextColor(108, 117, 125);
+        doc.text('SCOFIELD Goal Execution System - Confidential Report', margin, pageHeight - 10);
+        doc.text(`Page 1 of 1`, pageWidth - margin, pageHeight - 10, { align: 'right' });
+
+        // Save the PDF
+        doc.save('SCOFIELD-Goal-Report.pdf');
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Error generating PDF report: ' + error.message);
     }
-    yPosition += 15;
-
-    // Add Goal Type Distribution
-    doc.setFontSize(14);
-    doc.text('Goal Type Distribution', margin, yPosition);
-    yPosition += 10;
-
-    // Get data from charts
-    const typeChart = Chart.getChart('goalTypeChart');
-    if (typeChart) {
-        const data = typeChart.data;
-        doc.setFontSize(10);
-        data.labels.forEach((label, index) => {
-            const value = data.datasets[0].data[index];
-            const percentage = ((value / data.datasets[0].data.reduce((a, b) => a + b, 0)) * 100).toFixed(1);
-            doc.text(`${label}: ${percentage}%`, margin, yPosition);
-            yPosition += 8;
-        });
-    }
-    yPosition += 15;
-
-    // Add footer
-    doc.setFontSize(8);
-    doc.setTextColor(108, 117, 125);
-    doc.text('SCOFIELD Goal Execution System - Confidential Report', margin, pageHeight - 10);
-    doc.text(`Page 1 of 1`, pageWidth - margin, pageHeight - 10, { align: 'right' });
-
-    // Save the PDF
-    doc.save('SCOFIELD-Goal-Report.pdf');
 }
 
 // For backward compatibility
