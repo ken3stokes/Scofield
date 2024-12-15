@@ -637,53 +637,173 @@ async function generateReports() {
 }
 
 // Export Report as PDF
-async function exportReportAsPDF() {
-    try {
-        const { jsPDF } = window.jspdf;
-        if (!jsPDF) {
-            alert('PDF library not loaded. Please refresh the page.');
-            return;
-        }
+async function generatePDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const goals = await getAllGoals();
 
-        const modal = document.getElementById('reportsModal');
-        if (!modal) {
-            alert('Report content not found');
-            return;
-        }
+    // Set up document
+    doc.setFont("helvetica");
+    doc.setFontSize(20);
+    doc.text("SMART Goals Report", 105, 20, { align: "center" });
+    doc.setFontSize(12);
+    doc.text(new Date().toLocaleDateString(), 105, 30, { align: "center" });
 
-        const content = modal.querySelector('.modal-content');
-        if (!content) {
-            alert('Modal content not found');
-            return;
-        }
-
-        // Create PDF
-        const doc = new jsPDF('p', 'mm', 'a4');
-        
-        // Use html2canvas to capture the content
-        const canvas = await html2canvas(content, {
-            scale: 2,
-            useCORS: true,
-            logging: false
+    // Create table data
+    const headers = ['Type', 'Title', 'Status', 'Progress', 'Due Date', 'Tasks'];
+    const data = goals.sort((a, b) => new Date(a.timeBound) - new Date(b.timeBound))
+        .map(goal => {
+            const dueDate = new Date(goal.timeBound);
+            let progress;
+            if (goal.status === 'completed') {
+                progress = 100;
+            } else if (goal.status === 'not started' || !goal.tasks || goal.tasks.length === 0) {
+                progress = 0;
+            } else {
+                const completedTasks = goal.tasks.filter(task => task.completed).length;
+                const totalTasks = goal.tasks.length;
+                progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+            }
+            return [
+                goal.type.charAt(0).toUpperCase() + goal.type.slice(1),
+                goal.title,
+                goal.status.charAt(0).toUpperCase() + goal.status.slice(1),
+                `${progress}%`,
+                dueDate.toLocaleDateString(),
+                `${goal.tasks ? goal.tasks.length : 0}`
+            ];
         });
 
-        // Add the captured content to PDF
-        const imgData = canvas.toDataURL('image/png');
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const contentWidth = pageWidth - 20;
-        const contentHeight = (canvas.height * contentWidth) / canvas.width;
-        
-        doc.addImage(imgData, 'PNG', 10, 10, contentWidth, contentHeight);
-        doc.save('SCOFIELD-Goal-Report.pdf');
+    // Add table
+    doc.autoTable({
+        head: [headers],
+        body: data,
+        startY: 40,
+        theme: 'striped',
+        headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+        styles: { fontSize: 10, cellPadding: 3 },
+        columnStyles: {
+            0: { cellWidth: 25 },
+            1: { cellWidth: 50 },
+            2: { cellWidth: 25 },
+            3: { cellWidth: 25 },
+            4: { cellWidth: 30 },
+            5: { cellWidth: 20 }
+        }
+    });
 
-    } catch (error) {
-        console.error('Error generating PDF:', error);
-        alert('Error generating PDF report: ' + error.message);
+    // Calculate statistics
+    const statusData = {
+        'completed': goals.filter(g => g.status === 'completed').length,
+        'in progress': goals.filter(g => g.status === 'in progress').length,
+        'not started': goals.filter(g => g.status === 'not started').length
+    };
+
+    const typeData = goals.reduce((acc, goal) => {
+        acc[goal.type] = (acc[goal.type] || 0) + 1;
+        return acc;
+    }, {});
+
+    // Add Status Distribution Chart
+    const startY = doc.lastAutoTable.finalY + 20;
+    doc.setFontSize(14);
+    doc.text("Status Distribution", 105, startY, { align: "center" });
+
+    // Draw Status Pie Chart
+    const centerX = 105;
+    const centerY = startY + 40;
+    const radius = 30;
+    let currentAngle = 0;
+    const colors = {
+        'completed': [46, 204, 113],
+        'in progress': [52, 152, 219],
+        'not started': [149, 165, 166]
+    };
+
+    const total = Object.values(statusData).reduce((a, b) => a + b, 0);
+    Object.entries(statusData).forEach(([status, count]) => {
+        const angle = (count / total) * 2 * Math.PI;
+        doc.setFillColor(...colors[status]);
+        doc.setDrawColor(255, 255, 255);
+        doc.setLineWidth(0.5);
+
+        // Draw pie segment
+        doc.circle(centerX, centerY, radius, 'S');
+        doc.lines(
+            [[radius * Math.cos(currentAngle), radius * Math.sin(currentAngle)]],
+            centerX,
+            centerY
+        );
+        doc.lines(
+            [[radius * Math.cos(currentAngle + angle), radius * Math.sin(currentAngle + angle)]],
+            centerX,
+            centerY
+        );
+
+        // Fill segment
+        const midAngle = currentAngle + angle / 2;
+        doc.circle(
+            centerX + radius * 0.5 * Math.cos(midAngle),
+            centerY + radius * 0.5 * Math.sin(midAngle),
+            0.1,
+            'F'
+        );
+
+        currentAngle += angle;
+    });
+
+    // Add Status Legend
+    doc.setFontSize(10);
+    let legendY = centerY - 20;
+    Object.entries(statusData).forEach(([status, count]) => {
+        doc.setFillColor(...colors[status]);
+        doc.rect(centerX + 40, legendY, 10, 10, 'F');
+        doc.text(
+            `${status.charAt(0).toUpperCase() + status.slice(1)}: ${count} (${Math.round((count/total)*100)}%)`,
+            centerX + 55,
+            legendY + 8
+        );
+        legendY += 15;
+    });
+
+    // Add Type Distribution Chart
+    const typeStartY = centerY + 60;
+    doc.setFontSize(14);
+    doc.text("Type Distribution", 105, typeStartY, { align: "center" });
+
+    // Draw Type Bar Chart
+    const barData = Object.entries(typeData).sort((a, b) => b[1] - a[1]);
+    const barColors = ['#3498db', '#2ecc71', '#e74c3c', '#f1c40f', '#9b59b6'];
+    const barWidth = 100;
+    const maxValue = Math.max(...Object.values(typeData));
+    const barHeight = 12;
+    const barSpacing = 20;
+    let currentY = typeStartY + 20;
+
+    barData.forEach(([type, count], index) => {
+        const width = (count / maxValue) * barWidth;
+        doc.setFillColor(barColors[index] || '#95a5a6');
+        doc.rect(50, currentY, width, barHeight, 'F');
+        doc.setFontSize(10);
+        doc.text(type.charAt(0).toUpperCase() + type.slice(1), 45, currentY + 8, { align: 'right' });
+        doc.text(`${count}`, 155, currentY + 8);
+        currentY += barSpacing;
+    });
+
+    // Add page number
+    const pageCount = doc.internal.getNumberOfPages();
+    doc.setFontSize(10);
+    for(let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.text(`Page ${i} of ${pageCount}`, 105, doc.internal.pageSize.height - 10, { align: 'center' });
     }
+
+    // Save the PDF
+    doc.save("smart_goals_report.pdf");
 }
 
 // For backward compatibility
-const exportReport = exportReportAsPDF;
+const exportReport = generatePDF;
 
 // Export Goals as JSON backup
 async function exportGoals() {
