@@ -200,66 +200,42 @@
 
     <!-- Reports Modal -->
     <div class="modal fade" id="reportsModal" tabindex="-1">
-        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Goal Reports & Analytics</h5>
+                    <h5 class="modal-title">Reports & Analytics</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h6 class="card-title">Goals by Status</h6>
-                                    <div class="chart-container">
-                                        <canvas id="goalStatusChart"></canvas>
-                                    </div>
-                                </div>
-                            </div>
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0">Goal Status Distribution</h6>
+                            <button id="exportReportBtn" class="btn btn-primary btn-sm">
+                                <i class="bi bi-download me-1"></i>Export PDF
+                            </button>
                         </div>
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h6 class="card-title">Goals by Type</h6>
-                                    <div class="chart-container">
-                                        <canvas id="goalTypeChart"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <canvas id="statusChart"></canvas>
                     </div>
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h6 class="card-title">Goal Summary Report</h6>
-                                    <div class="table-responsive">
-                                        <table class="table table-striped" id="goalSummaryTable">
-                                            <thead>
-                                                <tr>
-                                                    <th>Type</th>
-                                                    <th>Title</th>
-                                                    <th class="d-none d-md-table-cell">Status</th>
-                                                    <th class="d-none d-md-table-cell">Progress</th>
-                                                    <th class="d-none d-md-table-cell">Due Date</th>
-                                                    <th>Tasks</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="goalSummaryTableBody">
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="mb-4">
+                        <h6 class="mb-3">Goal Type Distribution</h6>
+                        <canvas id="typeChart"></canvas>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" onclick="exportReportAsPDF()">
-                        <i class="bi bi-file-pdf me-1"></i>Export as PDF
-                    </button>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Title</th>
+                                    <th>Status</th>
+                                    <th>Progress</th>
+                                    <th>Due Date</th>
+                                    <th>Tasks</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reportTableBody">
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>

@@ -965,3 +965,9 @@ window.addEventListener('beforeunload', (event) => {
         return message;
     }
 });
+
+// Add event listener for export button in reports modal
+document.getElementById("exportReportBtn").addEventListener("click", generatePDF);
+
+// For backward compatibility
+const exportReport = generatePDF;
