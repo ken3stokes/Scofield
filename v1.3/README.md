@@ -1,6 +1,6 @@
-# SCOFIELD - Strategic Goal Planning System
+# SMART Goals Tracker v1.3.1
 
-Version 1.2.0
+Version 1.3.1
 
 A private, browser-based goal management system inspired by Michael Scofield's strategic approach.
 
