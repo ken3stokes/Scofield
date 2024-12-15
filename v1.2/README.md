@@ -1,6 +1,6 @@
-# SMART Goals Tracker v1.3.1
+# SCOFIELD - Strategic Goal Planning System
 
-Version 1.3.1
+Version 1.2.0
 
 A private, browser-based goal management system inspired by Michael Scofield's strategic approach.
 
@@ -15,20 +15,12 @@ A private, browser-based goal management system inspired by Michael Scofield's s
 - Visual analytics and reports
 - PDF report generation
 
-## Recent Updates (v1.3.1)
+## Recent Updates (v1.2.0)
 
-- Fixed progress calculation in PDF reports:
-  - Completed goals now correctly show 100% progress
-  - Not started goals show 0% progress
-  - In-progress goals show accurate task completion percentage
-  - Resolved NaN values in progress column
-
-Previous updates:
-- v1.2.0:
-  - Simplified PDF report generation for better reliability
-  - Enhanced report visualization with clear charts
-  - Improved overall system stability
-- v1.1.0:
+- Simplified PDF report generation for better reliability
+- Enhanced report visualization with clear charts
+- Improved overall system stability
+- Previous v1.1.0 updates:
   - Added Export/Import functionality for data backup
   - Improved mobile responsiveness
   - Enhanced UI spacing and readability
@@ -37,8 +29,9 @@ Previous updates:
 ## Privacy Features
 
 - All data is stored locally in your browser
-- No server-side storage or tracking
-- Export/Import feature for data backup
+- No server-side storage or transmission
+- Backup system for data preservation
+- No external dependencies for data storage
 
 ## Getting Started
 
@@ -60,19 +53,10 @@ Previous updates:
 
 ## Browser Support
 
-- Chrome
+- Chrome (Recommended)
 - Firefox
 - Edge
 - Safari
-
-## Version History
-
-### v1.3.1 (2024-12-15)
-- Fixed progress calculation in PDF reports:
-  - Completed goals now correctly show 100% progress
-  - Not started goals show 0% progress
-  - In-progress goals show accurate task completion percentage
-  - Resolved NaN values in progress column
 
 ## License
 
