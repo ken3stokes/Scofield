@@ -464,293 +464,127 @@ async function showReports() {
 
 // Initialize Charts
 function initializeCharts() {
-    Chart.defaults.font.family = "'Roboto', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif";
-    Chart.defaults.font.size = 12;
-    Chart.defaults.plugins.tooltip.padding = 10;
-    Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-    Chart.defaults.plugins.tooltip.titleFont.size = 13;
-    Chart.defaults.plugins.tooltip.titleFont.weight = 'bold';
-
     // Initialize Status Chart
     const statusCtx = document.getElementById('goalStatusChart');
-    if (statusCtx) {
-        if (window.statusChart) {
-            window.statusChart.destroy();
-        }
-        window.statusChart = new Chart(statusCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['In Progress', 'Completed', 'Overdue'],
-                datasets: [{
-                    data: [0, 0, 0],
-                    backgroundColor: ['#0d6efd', '#198754', '#dc3545'],
-                    borderWidth: 0,
-                    borderRadius: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                layout: {
-                    padding: {
-                        top: 20,
-                        bottom: 20,
-                        left: 20,
-                        right: 20
-                    }
-                },
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            padding: 20,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const label = context.label || '';
-                                const value = context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
-                                return `${label}: ${value} (${percentage}%)`;
-                            }
-                        }
-                    }
-                },
-                cutout: '60%'
+    window.statusChart = new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['In Progress', 'Completed', 'Not Started'],
+            datasets: [{
+                data: [0, 0, 0],
+                backgroundColor: ['#0d6efd', '#198754', '#dc3545']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
             }
-        });
-    }
+        }
+    });
 
     // Initialize Type Chart
     const typeCtx = document.getElementById('goalTypeChart');
-    if (typeCtx) {
-        if (window.typeChart) {
-            window.typeChart.destroy();
-        }
-        window.typeChart = new Chart(typeCtx, {
-            type: 'bar',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'Goals by Type',
-                    data: [],
-                    backgroundColor: '#0d6efd',
-                    borderRadius: 6,
-                    borderWidth: 0,
-                    maxBarThickness: 35,
-                    minBarLength: 2
-                }]
+    window.typeChart = new Chart(typeCtx, {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Number of Goals',
+                data: [],
+                backgroundColor: '#0d6efd'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                indexAxis: 'y',
-                layout: {
-                    padding: {
-                        top: 20,
-                        bottom: 20,
-                        left: 15,
-                        right: 15
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return `${context.parsed.x} goals`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            display: false,
-                            drawBorder: false
-                        },
-                        ticks: {
-                            padding: 10,
-                            font: {
-                                size: 12
-                            }
-                        }
-                    },
-                    x: {
-                        beginAtZero: true,
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.1)',
-                            drawBorder: false
-                        },
-                        ticks: {
-                            stepSize: 1,
-                            padding: 10,
-                            font: {
-                                size: 12
-                            }
-                        }
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
                     }
                 }
             }
-        });
-    }
+        }
+    });
 }
 
 // Generate Reports
 async function generateReports() {
     try {
         const goals = await getAllGoals();
-        if (!goals || goals.length === 0) {
-            throw new Error('No goals found');
-        }
-
-        // Calculate statistics
-        const totalGoals = goals.length;
-        const completedGoals = goals.filter(goal => goal.status === 'completed').length;
-        const inProgressGoals = goals.filter(goal => goal.status === 'in-progress').length;
-        const overdueGoals = goals.filter(goal => {
-            const dueDate = new Date(goal.timeBound);
-            return goal.status !== 'completed' && dueDate < new Date();
-        }).length;
-
+        
         // Update Status Chart
-        if (window.statusChart) {
-            window.statusChart.data.datasets[0].data = [inProgressGoals, completedGoals, overdueGoals];
-            window.statusChart.update();
-        }
+        const statusData = {
+            'in-progress': goals.filter(goal => goal.status === 'in-progress').length,
+            'completed': goals.filter(goal => goal.status === 'completed').length,
+            'not-started': goals.filter(goal => goal.status === 'not-started').length
+        };
+        
+        window.statusChart.data.datasets[0].data = [
+            statusData['in-progress'],
+            statusData['completed'],
+            statusData['not-started']
+        ];
+        window.statusChart.update();
 
-        // Calculate type statistics
+        // Update Type Chart
         const typeData = {};
         goals.forEach(goal => {
-            if (!typeData[goal.type]) {
-                typeData[goal.type] = {
-                    total: 0,
-                    completed: 0,
-                    inProgress: 0,
-                    overdue: 0
-                };
-            }
-            typeData[goal.type].total++;
-            if (goal.status === 'completed') {
-                typeData[goal.type].completed++;
-            } else if (goal.status === 'in-progress') {
-                typeData[goal.type].inProgress++;
-                const dueDate = new Date(goal.timeBound);
-                if (dueDate < new Date()) {
-                    typeData[goal.type].overdue++;
-                }
-            }
+            typeData[goal.type] = (typeData[goal.type] || 0) + 1;
         });
 
-        // Sort types by total count (descending)
-        const sortedTypes = Object.entries(typeData)
-            .sort(([,a], [,b]) => b.total - a.total)
-            .map(([type]) => type);
+        window.typeChart.data.labels = Object.keys(typeData);
+        window.typeChart.data.datasets[0].data = Object.values(typeData);
+        window.typeChart.update();
 
-        // Update Type Chart with sorted data
-        if (window.typeChart) {
-            window.typeChart.data.labels = sortedTypes.map(type => 
-                type.charAt(0).toUpperCase() + type.slice(1)
-            );
-            window.typeChart.data.datasets[0].data = sortedTypes.map(type => typeData[type].total);
-            window.typeChart.update();
-        }
-
-        // Update Category Statistics
-        const categoryStats = document.getElementById('categoryStats');
-        if (categoryStats) {
-            let statsHTML = '';
-            sortedTypes.forEach(type => {
-                const stats = typeData[type];
-                const typeName = type.charAt(0).toUpperCase() + type.slice(1);
-                statsHTML += `
-                    <div class="mb-3">
-                        <h6 class="mb-2">${typeName}</h6>
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="text-muted">Total Goals:</span>
-                            <span class="badge bg-primary">${stats.total}</span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="text-muted">Completed:</span>
-                            <span class="badge bg-success">${stats.completed}</span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="text-muted">In Progress:</span>
-                            <span class="badge bg-info">${stats.inProgress}</span>
-                        </div>
-                        ${stats.overdue > 0 ? `
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-muted">Overdue:</span>
-                            <span class="badge bg-danger">${stats.overdue}</span>
-                        </div>` : ''}
-                    </div>
-                `;
-            });
-            categoryStats.innerHTML = statsHTML;
-        }
-
-        // Update Goal Summary Table
-        const tableBody = document.querySelector('#goalSummaryTable tbody');
-        if (tableBody) {
-            let tableHTML = '';
-            goals.sort((a, b) => new Date(a.timeBound) - new Date(b.timeBound))
-                .forEach(goal => {
-                    const dueDate = new Date(goal.timeBound);
-                    let progress;
-                    if (goal.status === 'completed') {
-                        progress = 100;
-                    } else if (goal.status === 'not started' || !goal.tasks || goal.tasks.length === 0) {
-                        progress = 0;
-                    } else {
-                        const completedTasks = goal.tasks.filter(task => task.completed).length;
-                        const totalTasks = goal.tasks.length;
-                        progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-                    }
-                    const isOverdue = goal.status !== 'completed' && dueDate < new Date();
-                    
-                    tableHTML += `
-                        <tr>
-                            <td><span class="badge bg-secondary">${goal.type.charAt(0).toUpperCase() + goal.type.slice(1)}</span></td>
-                            <td>${goal.title}</td>
-                            <td>
-                                <span class="badge ${goal.status === 'completed' ? 'bg-success' : 
-                                    (isOverdue ? 'bg-danger' : 'bg-primary')}">
-                                    ${goal.status === 'completed' ? 'Completed' : (isOverdue ? 'Overdue' : 'In Progress')}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="progress" style="height: 20px;">
-                                    <div class="progress-bar ${progress === 100 ? 'bg-success' : 
-                                        (isOverdue ? 'bg-danger' : 'bg-primary')}" 
-                                        role="progressbar" 
-                                        style="width: ${progress}%"
-                                        aria-valuenow="${progress}" 
-                                        aria-valuemin="0" 
-                                        aria-valuemax="100">
-                                        ${progress}%
-                                    </div>
-                                </div>
-                            </td>
-                            <td>${dueDate.toLocaleDateString()}</td>
-                            <td>${goal.tasks ? goal.tasks.length : 0}</td>
-                        </tr>
-                    `;
-                });
-            tableBody.innerHTML = tableHTML;
-        }
-
-        console.log("Report generation completed successfully");
-        
     } catch (error) {
         console.error('Error generating reports:', error);
-        alert('Error generating reports: ' + error.message);
+    }
+}
+
+// Export Report as PDF
+async function exportReportAsPDF() {
+    try {
+        const goals = await getAllGoals();
+        const doc = new jsPDF();
+        
+        // Add title
+        doc.setFontSize(20);
+        doc.text('Goals Report', 20, 20);
+        
+        // Add summary
+        doc.setFontSize(12);
+        doc.text(`Total Goals: ${goals.length}`, 20, 40);
+        
+        // Add goals table
+        const tableData = goals.map(goal => [
+            goal.type,
+            goal.title,
+            goal.status,
+            goal.progress + '%',
+            new Date(goal.timeBound).toLocaleDateString()
+        ]);
+        
+        doc.autoTable({
+            head: [['Type', 'Title', 'Status', 'Progress', 'Due Date']],
+            body: tableData,
+            startY: 50
+        });
+        
+        doc.save('goals-report.pdf');
+    } catch (error) {
+        console.error('Error exporting report:', error);
+        alert('Error exporting report. Please try again.');
     }
 }
 
@@ -798,253 +632,6 @@ async function getAllGoals() {
             }
         };
     });
-}
-
-// Export Report as PDF
-async function exportReportAsPDF() {
-    try {
-        // Check if the reports modal is open
-        const reportsModal = document.getElementById('reportsModal');
-        if (!reportsModal || !reportsModal.classList.contains('show')) {
-            throw new Error('Please open the Reports view first');
-        }
-
-        // Add loading indicator
-        const exportButton = reportsModal.querySelector('button.btn-primary');
-        const originalButtonText = exportButton.innerHTML;
-        exportButton.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Generating PDF...';
-        exportButton.disabled = true;
-
-        // Get all goals data
-        const goals = await getAllGoals();
-        if (!goals || goals.length === 0) {
-            throw new Error('No goals found');
-        }
-
-        // Calculate statistics
-        const completedGoals = goals.filter(goal => goal.status === 'completed').length;
-        const inProgressGoals = goals.filter(goal => goal.status === 'in-progress').length;
-        const overdueGoals = goals.filter(goal => {
-            const dueDate = new Date(goal.timeBound);
-            return goal.status !== 'completed' && dueDate < new Date();
-        }).length;
-
-        // Calculate type statistics
-        const typeData = {};
-        goals.forEach(goal => {
-            if (!typeData[goal.type]) {
-                typeData[goal.type] = {
-                    total: 0,
-                    completed: 0,
-                    inProgress: 0,
-                    overdue: 0
-                };
-            }
-            typeData[goal.type].total++;
-            if (goal.status === 'completed') {
-                typeData[goal.type].completed++;
-            } else if (goal.status === 'in-progress') {
-                typeData[goal.type].inProgress++;
-                const dueDate = new Date(goal.timeBound);
-                if (dueDate < new Date()) {
-                    typeData[goal.type].overdue++;
-                }
-            }
-        });
-
-        // Initialize jsPDF
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 15;
-        let yOffset = 20;
-
-        // Add title with styling
-        doc.setFillColor(13, 110, 253);
-        doc.rect(0, 0, pageWidth, 25, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(20);
-        doc.text('SCOFIELD - Goal Report', margin, 17);
-
-        // Add date
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "normal");
-        const dateText = `Generated on: ${new Date().toLocaleDateString()}`;
-        doc.text(dateText, pageWidth - margin - doc.getTextWidth(dateText), 17);
-
-        // Reset text color for content
-        doc.setTextColor(0, 0, 0);
-        yOffset = 35;
-
-        // Add Status Distribution
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(14);
-        doc.text('Goal Status Distribution', margin, yOffset);
-        yOffset += 10;
-
-        // Draw Status Distribution as pie segments
-        const centerX = pageWidth / 4 + margin;
-        const centerY = yOffset + 40;
-        const radius = 30;
-        const total = completedGoals + inProgressGoals + overdueGoals;
-        
-        if (total > 0) {
-            let startAngle = 0;
-            const statusData = [
-                { value: inProgressGoals, color: [13, 110, 253], label: 'In Progress' },
-                { value: completedGoals, color: [25, 135, 84], label: 'Completed' },
-                { value: overdueGoals, color: [220, 53, 69], label: 'Overdue' }
-            ];
-
-            // Draw pie segments
-            statusData.forEach(item => {
-                if (item.value > 0) {
-                    const angle = (item.value / total) * 2 * Math.PI;
-                    doc.setFillColor(...item.color);
-                    doc.circle(centerX, centerY, radius, 'F');
-                    doc.setFillColor(255, 255, 255);
-                    doc.circle(centerX, centerY, radius * 0.6, 'F');
-                    startAngle += angle;
-                }
-            });
-
-            // Add legend
-            let legendY = centerY - 20;
-            statusData.forEach(item => {
-                if (item.value > 0) {
-                    doc.setFillColor(...item.color);
-                    doc.circle(centerX + radius + 10, legendY, 3, 'F');
-                    doc.setFont("helvetica", "normal");
-                    doc.setFontSize(10);
-                    doc.text(`${item.label}: ${item.value} (${Math.round((item.value / total) * 100)}%)`, 
-                        centerX + radius + 20, legendY + 1);
-                    legendY += 10;
-                }
-            });
-        }
-
-        yOffset = centerY + radius + 20;
-
-        // Add Type Distribution
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(14);
-        doc.text('Goal Type Distribution', margin, yOffset);
-        yOffset += 10;
-
-        // Draw Type Distribution as horizontal bars
-        const types = Object.entries(typeData)
-            .sort(([,a], [,b]) => b.total - a.total);
-
-        const barHeight = 12;
-        const barSpacing = 8;
-        const maxBarWidth = (pageWidth - margin * 2) * 0.6;
-        const maxValue = Math.max(...types.map(([,data]) => data.total));
-
-        types.forEach(([type, data], index) => {
-            const barWidth = (data.total / maxValue) * maxBarWidth;
-            const y = yOffset + (barHeight + barSpacing) * index;
-
-            // Draw bar
-            doc.setFillColor(13, 110, 253);
-            doc.rect(margin + 60, y, barWidth, barHeight, 'F');
-
-            // Add label
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(10);
-            doc.text(type.charAt(0).toUpperCase() + type.slice(1), margin, y + barHeight - 2);
-
-            // Add value
-            doc.text(`${data.total}`, margin + 65 + barWidth, y + barHeight - 2);
-        });
-
-        yOffset += (barHeight + barSpacing) * types.length + 20;
-
-        // Add Goal Summary Table
-        if (yOffset > pageHeight - 60) {
-            doc.addPage();
-            yOffset = margin;
-        }
-
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(14);
-        doc.text('Goal Summary', margin, yOffset);
-        yOffset += 10;
-
-        // Create table data
-        const headers = ['Type', 'Title', 'Status', 'Progress', 'Due Date', 'Tasks'];
-        const data = goals.sort((a, b) => new Date(a.timeBound) - new Date(b.timeBound))
-            .map(goal => {
-                const dueDate = new Date(goal.timeBound);
-                let progress;
-                if (goal.status === 'completed') {
-                    progress = 100;
-                } else if (goal.status === 'not started' || !goal.tasks || goal.tasks.length === 0) {
-                    progress = 0;
-                } else {
-                    const completedTasks = goal.tasks.filter(task => task.completed).length;
-                    const totalTasks = goal.tasks.length;
-                    progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-                }
-                return [
-                    goal.type.charAt(0).toUpperCase() + goal.type.slice(1),
-                    goal.title,
-                    goal.status.charAt(0).toUpperCase() + goal.status.slice(1),
-                    `${progress}%`,
-                    dueDate.toLocaleDateString(),
-                    `${goal.tasks ? goal.tasks.length : 0}`
-                ];
-            });
-
-        // Add table
-        doc.autoTable({
-            startY: yOffset,
-            head: [headers],
-            body: data,
-            theme: 'striped',
-            headStyles: {
-                fillColor: [13, 110, 253],
-                textColor: [255, 255, 255],
-                fontSize: 10,
-                fontStyle: 'bold'
-            },
-            bodyStyles: {
-                fontSize: 9,
-                textColor: [50, 50, 50]
-            },
-            columnStyles: {
-                0: { cellWidth: 25 },
-                1: { cellWidth: 'auto' },
-                2: { cellWidth: 25 },
-                3: { cellWidth: 20 },
-                4: { cellWidth: 25 },
-                5: { cellWidth: 20 }
-            },
-            margin: { left: margin, right: margin }
-        });
-
-        // Add page numbers
-        const totalPages = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= totalPages; i++) {
-            doc.setPage(i);
-            doc.setFont("helvetica", "italic");
-            doc.setFontSize(8);
-            doc.setTextColor(128, 128, 128);
-            doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin - 20, pageHeight - 10);
-        }
-
-        // Save the PDF
-        doc.save('SCOFIELD-Goal-Report.pdf');
-
-        // Reset button state
-        exportButton.innerHTML = originalButtonText;
-        exportButton.disabled = false;
-
-    } catch (error) {
-        console.error('Error generating PDF:', error);
-        alert('Error generating PDF: ' + error.message);
-    }
 }
 
 // Export Goals as JSON backup
