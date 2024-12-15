@@ -494,77 +494,51 @@ function showReports() {
 }
 
 // Initialize Charts
-async function initializeCharts() {
-    const statusCtx = document.getElementById('statusChart').getContext('2d');
-    const typeCtx = document.getElementById('typeChart').getContext('2d');
-
-    // Destroy existing charts if they exist
-    if (window.statusChart instanceof Chart) {
-        window.statusChart.destroy();
-    }
-    if (window.typeChart instanceof Chart) {
-        window.typeChart.destroy();
-    }
-
-    // Create Status Chart
+function initializeCharts() {
+    // Initialize Status Chart
+    const statusCtx = document.getElementById('statusChart');
     window.statusChart = new Chart(statusCtx, {
         type: 'doughnut',
         data: {
             labels: ['In Progress', 'Completed', 'Not Started'],
             datasets: [{
                 data: [0, 0, 0],
-                backgroundColor: [
-                    'rgb(52, 152, 219)',
-                    'rgb(46, 204, 113)',
-                    'rgb(149, 165, 166)'
-                ]
+                backgroundColor: ['#0d6efd', '#198754', '#dc3545']
             }]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: {
                     position: 'bottom'
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = total > 0 ? Math.round((context.raw / total) * 100) : 0;
-                            return `${context.label}: ${context.raw} (${percentage}%)`;
-                        }
-                    }
                 }
             }
         }
     });
 
-    // Create Type Chart
+    // Initialize Type Chart
+    const typeCtx = document.getElementById('typeChart');
     window.typeChart = new Chart(typeCtx, {
         type: 'bar',
         data: {
             labels: [],
             datasets: [{
+                label: 'Number of Goals',
                 data: [],
-                backgroundColor: [
-                    'rgb(52, 152, 219)',
-                    'rgb(46, 204, 113)',
-                    'rgb(231, 76, 60)',
-                    'rgb(241, 196, 15)',
-                    'rgb(155, 89, 182)'
-                ]
+                backgroundColor: '#0d6efd'
             }]
         },
         options: {
-            indexAxis: 'y',
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: {
                     display: false
                 }
             },
             scales: {
-                x: {
+                y: {
                     beginAtZero: true,
                     ticks: {
                         stepSize: 1
