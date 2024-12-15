@@ -495,307 +495,152 @@ function showReports() {
 
 // Initialize Charts
 function initializeCharts() {
-    // Initialize Status Chart
-    const statusCtx = document.getElementById('statusChart');
-    window.statusChart = new Chart(statusCtx, {
-        type: 'doughnut',
-        data: {
-            labels: ['In Progress', 'Completed', 'Not Started'],
-            datasets: [{
-                data: [0, 0, 0],
-                backgroundColor: ['#0d6efd', '#198754', '#dc3545']
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            }
+    try {
+        // Destroy existing charts if they exist
+        if (window.statusChart instanceof Chart) {
+            window.statusChart.destroy();
         }
-    });
+        if (window.typeChart instanceof Chart) {
+            window.typeChart.destroy();
+        }
 
-    // Initialize Type Chart
-    const typeCtx = document.getElementById('typeChart');
-    window.typeChart = new Chart(typeCtx, {
-        type: 'bar',
-        data: {
-            labels: [],
-            datasets: [{
-                label: 'Number of Goals',
-                data: [],
-                backgroundColor: '#0d6efd'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                }
+        // Initialize Status Chart
+        const statusCtx = document.getElementById('goalStatusChart');
+        if (!statusCtx) {
+            throw new Error('Status chart canvas not found');
+        }
+        window.statusChart = new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['In Progress', 'Completed', 'Not Started'],
+                datasets: [{
+                    data: [0, 0, 0],
+                    backgroundColor: ['#0d6efd', '#198754', '#dc3545']
+                }]
             },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
                     }
                 }
             }
+        });
+
+        // Initialize Type Chart
+        const typeCtx = document.getElementById('goalTypeChart');
+        if (!typeCtx) {
+            throw new Error('Type chart canvas not found');
         }
-    });
+        window.typeChart = new Chart(typeCtx, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Number of Goals',
+                    data: [],
+                    backgroundColor: '#0d6efd'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+
+        console.log('Charts initialized successfully');
+    } catch (error) {
+        console.error('Error initializing charts:', error);
+    }
 }
 
 // Generate Reports
 async function generateReports() {
     try {
-        const transaction = db.transaction(["goals", "tasks"], "readonly");
-        const goalStore = transaction.objectStore("goals");
-        const taskStore = transaction.objectStore("tasks");
-        
-        // Get all goals
-        const goals = await new Promise((resolve, reject) => {
-            goalStore.getAll().onsuccess = (event) => resolve(event.target.result);
-        });
-
-        // Prepare data for charts
-        const statusData = {
-            'active': 0,
-            'completed': 0,
-            'not started': 0
-        };
-        
-        const typeData = {};
-        const tableBody = document.querySelector("#goalSummaryTable tbody");
-        tableBody.innerHTML = "";
-        
-        // Process each goal
-        const data = goals.sort((a, b) => new Date(a.timeBound) - new Date(b.timeBound))
-            .map(goal => {
-                const dueDate = new Date(goal.timeBound);
-                let progress;
-                if (goal.status === 'completed') {
-                    progress = 100;
-                } else if (goal.status === 'not started' || !goal.tasks || goal.tasks.length === 0) {
-                    progress = 0;
-                } else {
-                    const completedTasks = goal.tasks.filter(task => task.completed).length;
-                    const totalTasks = goal.tasks.length;
-                    progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-                }
-                return [
-                    goal.type.charAt(0).toUpperCase() + goal.type.slice(1),
-                    goal.title,
-                    goal.status.charAt(0).toUpperCase() + goal.status.slice(1),
-                    `${progress}%`,
-                    dueDate.toLocaleDateString(),
-                    `${goal.tasks ? goal.tasks.length : 0}`
-                ];
-            });
-        
-        data.forEach(row => {
-            const rowElement = document.createElement("tr");
-            rowElement.innerHTML = `
-                <td>${row[0]}</td>
-                <td>${row[1]}</td>
-                <td>${row[2]}</td>
-                <td>${row[3]}</td>
-                <td>${row[4]}</td>
-                <td>${row[5]}</td>
-            `;
-            tableBody.appendChild(rowElement);
-        });
+        const goals = await getAllGoals();
         
         // Update Status Chart
+        const statusData = {
+            'in-progress': goals.filter(goal => goal.status === 'in-progress').length,
+            'completed': goals.filter(goal => goal.status === 'completed').length,
+            'not-started': goals.filter(goal => goal.status === 'not-started').length
+        };
+        
         window.statusChart.data.datasets[0].data = [
-            statusData.active,
-            statusData.completed,
-            statusData['not started']
+            statusData['in-progress'],
+            statusData['completed'],
+            statusData['not-started']
         ];
         window.statusChart.update();
-        
+
         // Update Type Chart
+        const typeData = {};
+        goals.forEach(goal => {
+            typeData[goal.type] = (typeData[goal.type] || 0) + 1;
+        });
+
         window.typeChart.data.labels = Object.keys(typeData);
         window.typeChart.data.datasets[0].data = Object.values(typeData);
         window.typeChart.update();
-        
+
     } catch (error) {
-        console.error("Error generating reports:", error);
-        alert("Error generating reports. Please try again.");
+        console.error('Error generating reports:', error);
     }
 }
 
 // Export Report as PDF
-async function generatePDF() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const goals = await getAllGoals();
-
-    // Set up document
-    doc.setFont("helvetica");
-    doc.setFontSize(20);
-    doc.text("SMART Goals Report", 105, 20, { align: "center" });
-    doc.setFontSize(12);
-    doc.text(new Date().toLocaleDateString(), 105, 30, { align: "center" });
-
-    // Create table data
-    const headers = ['Type', 'Title', 'Status', 'Progress', 'Due Date', 'Tasks'];
-    const data = goals.sort((a, b) => new Date(a.timeBound) - new Date(b.timeBound))
-        .map(goal => {
-            const dueDate = new Date(goal.timeBound);
-            let progress;
-            if (goal.status === 'completed') {
-                progress = 100;
-            } else if (goal.status === 'not started' || !goal.tasks || goal.tasks.length === 0) {
-                progress = 0;
-            } else {
-                const completedTasks = goal.tasks.filter(task => task.completed).length;
-                const totalTasks = goal.tasks.length;
-                progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-            }
-            return [
-                goal.type.charAt(0).toUpperCase() + goal.type.slice(1),
-                goal.title,
-                goal.status.charAt(0).toUpperCase() + goal.status.slice(1),
-                `${progress}%`,
-                dueDate.toLocaleDateString(),
-                `${goal.tasks ? goal.tasks.length : 0}`
-            ];
+async function exportReportAsPDF() {
+    try {
+        const goals = await getAllGoals();
+        const doc = new jsPDF();
+        
+        // Add title
+        doc.setFontSize(20);
+        doc.text('Goals Report', 20, 20);
+        
+        // Add summary
+        doc.setFontSize(12);
+        doc.text(`Total Goals: ${goals.length}`, 20, 40);
+        
+        // Add goals table
+        const tableData = goals.map(goal => [
+            goal.type,
+            goal.title,
+            goal.status,
+            goal.progress + '%',
+            new Date(goal.timeBound).toLocaleDateString()
+        ]);
+        
+        doc.autoTable({
+            head: [['Type', 'Title', 'Status', 'Progress', 'Due Date']],
+            body: tableData,
+            startY: 50
         });
-
-    // Add table
-    doc.autoTable({
-        head: [headers],
-        body: data,
-        startY: 40,
-        theme: 'striped',
-        headStyles: { fillColor: [41, 128, 185], textColor: 255 },
-        styles: { fontSize: 10, cellPadding: 3 },
-        columnStyles: {
-            0: { cellWidth: 25 },
-            1: { cellWidth: 50 },
-            2: { cellWidth: 25 },
-            3: { cellWidth: 25 },
-            4: { cellWidth: 30 },
-            5: { cellWidth: 20 }
-        }
-    });
-
-    // Calculate statistics
-    const statusData = {
-        'completed': goals.filter(g => g.status === 'completed').length,
-        'in progress': goals.filter(g => g.status === 'in progress').length,
-        'not started': goals.filter(g => g.status === 'not started').length
-    };
-
-    const typeData = goals.reduce((acc, goal) => {
-        acc[goal.type] = (acc[goal.type] || 0) + 1;
-        return acc;
-    }, {});
-
-    // Add Status Distribution Chart
-    const startY = doc.lastAutoTable.finalY + 20;
-    doc.setFontSize(14);
-    doc.text("Status Distribution", 105, startY, { align: "center" });
-
-    // Draw Status Pie Chart
-    const centerX = 105;
-    const centerY = startY + 40;
-    const radius = 30;
-    let currentAngle = 0;
-    const colors = {
-        'completed': [46, 204, 113],
-        'in progress': [52, 152, 219],
-        'not started': [149, 165, 166]
-    };
-
-    const total = Object.values(statusData).reduce((a, b) => a + b, 0);
-    Object.entries(statusData).forEach(([status, count]) => {
-        const angle = (count / total) * 2 * Math.PI;
-        doc.setFillColor(...colors[status]);
-        doc.setDrawColor(255, 255, 255);
-        doc.setLineWidth(0.5);
-
-        // Draw pie segment
-        doc.circle(centerX, centerY, radius, 'S');
-        doc.lines(
-            [[radius * Math.cos(currentAngle), radius * Math.sin(currentAngle)]],
-            centerX,
-            centerY
-        );
-        doc.lines(
-            [[radius * Math.cos(currentAngle + angle), radius * Math.sin(currentAngle + angle)]],
-            centerX,
-            centerY
-        );
-
-        // Fill segment
-        const midAngle = currentAngle + angle / 2;
-        doc.circle(
-            centerX + radius * 0.5 * Math.cos(midAngle),
-            centerY + radius * 0.5 * Math.sin(midAngle),
-            0.1,
-            'F'
-        );
-
-        currentAngle += angle;
-    });
-
-    // Add Status Legend
-    doc.setFontSize(10);
-    let legendY = centerY - 20;
-    Object.entries(statusData).forEach(([status, count]) => {
-        doc.setFillColor(...colors[status]);
-        doc.rect(centerX + 40, legendY, 10, 10, 'F');
-        doc.text(
-            `${status.charAt(0).toUpperCase() + status.slice(1)}: ${count} (${Math.round((count/total)*100)}%)`,
-            centerX + 55,
-            legendY + 8
-        );
-        legendY += 15;
-    });
-
-    // Add Type Distribution Chart
-    const typeStartY = centerY + 60;
-    doc.setFontSize(14);
-    doc.text("Type Distribution", 105, typeStartY, { align: "center" });
-
-    // Draw Type Bar Chart
-    const barData = Object.entries(typeData).sort((a, b) => b[1] - a[1]);
-    const barColors = ['#3498db', '#2ecc71', '#e74c3c', '#f1c40f', '#9b59b6'];
-    const barWidth = 100;
-    const maxValue = Math.max(...Object.values(typeData));
-    const barHeight = 12;
-    const barSpacing = 20;
-    let currentY = typeStartY + 20;
-
-    barData.forEach(([type, count], index) => {
-        const width = (count / maxValue) * barWidth;
-        doc.setFillColor(barColors[index] || '#95a5a6');
-        doc.rect(50, currentY, width, barHeight, 'F');
-        doc.setFontSize(10);
-        doc.text(type.charAt(0).toUpperCase() + type.slice(1), 45, currentY + 8, { align: 'right' });
-        doc.text(`${count}`, 155, currentY + 8);
-        currentY += barSpacing;
-    });
-
-    // Add page number
-    const pageCount = doc.internal.getNumberOfPages();
-    doc.setFontSize(10);
-    for(let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.text(`Page ${i} of ${pageCount}`, 105, doc.internal.pageSize.height - 10, { align: 'center' });
+        
+        doc.save('goals-report.pdf');
+    } catch (error) {
+        console.error('Error exporting report:', error);
+        alert('Error exporting report. Please try again.');
     }
-
-    // Save the PDF
-    doc.save("smart_goals_report.pdf");
 }
 
 // For backward compatibility
-const exportReport = generatePDF;
+const exportReport = exportReportAsPDF;
 
 // Export Goals as JSON backup
 async function exportGoals() {
@@ -959,7 +804,7 @@ window.addEventListener('beforeunload', (event) => {
 });
 
 // Add event listener for export button in reports modal
-document.getElementById("exportReportBtn").addEventListener("click", generatePDF);
+document.getElementById("exportReportBtn").addEventListener("click", exportReportAsPDF);
 
 // For backward compatibility
-const exportReport = generatePDF;
+const exportReport = exportReportAsPDF;
