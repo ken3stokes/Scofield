@@ -414,7 +414,14 @@ function updateGoalProgress(goalId) {
         if (!tasks || tasks.length === 0) return;
         
         const completedTasks = tasks.filter(task => task.completed).length;
-        const progress = Math.round((completedTasks / tasks.length) * 100);
+        let progress;
+        if (tasks.length === 0) {
+            progress = 0;
+        } else if (completedTasks === tasks.length) {
+            progress = 100;
+        } else {
+            progress = Math.round((completedTasks / tasks.length) * 100);
+        }
         
         const goalRequest = goalStore.get(goalId);
         
@@ -574,48 +581,41 @@ async function generateReports() {
         tableBody.innerHTML = "";
         
         // Process each goal
-        for (const goal of goals) {
-            // Determine status
-            const dueDate = new Date(goal.timeBound);
-            const isOverdue = dueDate < new Date() && goal.status !== "completed";
-            const status = isOverdue ? 'overdue' : goal.status;
-            statusData[status]++;
-            
-            // Count by type
-            typeData[goal.type] = (typeData[goal.type] || 0) + 1;
-            
-            // Get tasks for this goal
-            const tasks = await new Promise((resolve, reject) => {
-                const taskIndex = taskStore.index("goalId");
-                const request = taskIndex.getAll(goal.id);
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error);
+        const data = goals.sort((a, b) => new Date(a.timeBound) - new Date(b.timeBound))
+            .map(goal => {
+                const dueDate = new Date(goal.timeBound);
+                let progress;
+                if (goal.status === 'completed') {
+                    progress = 100;
+                } else if (goal.status === 'not started' || !goal.tasks || goal.tasks.length === 0) {
+                    progress = 0;
+                } else {
+                    const completedTasks = goal.tasks.filter(task => task.completed).length;
+                    const totalTasks = goal.tasks.length;
+                    progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+                }
+                return [
+                    goal.type.charAt(0).toUpperCase() + goal.type.slice(1),
+                    goal.title,
+                    goal.status.charAt(0).toUpperCase() + goal.status.slice(1),
+                    `${progress}%`,
+                    dueDate.toLocaleDateString(),
+                    `${goal.tasks ? goal.tasks.length : 0}`
+                ];
             });
-            
-            const completedTasks = tasks.filter(task => task.completed).length;
-            
-            // Add row to table
-            const row = document.createElement("tr");
-            row.innerHTML = `
-                <td>${goal.type}</td>
-                <td>${goal.title}</td>
-                <td>
-                    <span class="badge ${status === 'completed' ? 'bg-success' : status === 'overdue' ? 'bg-danger' : 'bg-primary'}">
-                        ${status.charAt(0).toUpperCase() + status.slice(1)}
-                    </span>
-                </td>
-                <td>
-                    <div class="progress">
-                        <div class="progress-bar" role="progressbar" style="width: ${goal.progress}%">
-                            ${goal.progress}%
-                        </div>
-                    </div>
-                </td>
-                <td>${new Date(goal.timeBound).toLocaleDateString()}</td>
-                <td>${completedTasks}/${tasks.length}</td>
+        
+        data.forEach(row => {
+            const rowElement = document.createElement("tr");
+            rowElement.innerHTML = `
+                <td>${row[0]}</td>
+                <td>${row[1]}</td>
+                <td>${row[2]}</td>
+                <td>${row[3]}</td>
+                <td>${row[4]}</td>
+                <td>${row[5]}</td>
             `;
-            tableBody.appendChild(row);
-        }
+            tableBody.appendChild(rowElement);
+        });
         
         // Update Status Chart
         window.statusChart.data.datasets[0].data = [
