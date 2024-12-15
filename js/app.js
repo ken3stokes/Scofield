@@ -494,57 +494,77 @@ function showReports() {
 }
 
 // Initialize Charts
-function initializeCharts() {
-    // Initialize Status Chart
-    const statusCtx = document.getElementById('goalStatusChart');
-    if (window.statusChart) {
+async function initializeCharts() {
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    const typeCtx = document.getElementById('typeChart').getContext('2d');
+
+    // Destroy existing charts if they exist
+    if (window.statusChart instanceof Chart) {
         window.statusChart.destroy();
     }
+    if (window.typeChart instanceof Chart) {
+        window.typeChart.destroy();
+    }
+
+    // Create Status Chart
     window.statusChart = new Chart(statusCtx, {
         type: 'doughnut',
         data: {
-            labels: ['In Progress', 'Completed', 'Overdue'],
+            labels: ['In Progress', 'Completed', 'Not Started'],
             datasets: [{
-                data: [0, 0, 0], // Initial empty data
-                backgroundColor: ['#0d6efd', '#198754', '#dc3545']
+                data: [0, 0, 0],
+                backgroundColor: [
+                    'rgb(52, 152, 219)',
+                    'rgb(46, 204, 113)',
+                    'rgb(149, 165, 166)'
+                ]
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
             plugins: {
                 legend: {
                     position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = total > 0 ? Math.round((context.raw / total) * 100) : 0;
+                            return `${context.label}: ${context.raw} (${percentage}%)`;
+                        }
+                    }
                 }
             }
         }
     });
 
-    // Initialize Type Chart
-    const typeCtx = document.getElementById('goalTypeChart');
-    if (window.typeChart) {
-        window.typeChart.destroy();
-    }
+    // Create Type Chart
     window.typeChart = new Chart(typeCtx, {
         type: 'bar',
         data: {
             labels: [],
             datasets: [{
-                label: 'Number of Goals',
                 data: [],
-                backgroundColor: '#0d6efd'
+                backgroundColor: [
+                    'rgb(52, 152, 219)',
+                    'rgb(46, 204, 113)',
+                    'rgb(231, 76, 60)',
+                    'rgb(241, 196, 15)',
+                    'rgb(155, 89, 182)'
+                ]
             }]
         },
         options: {
+            indexAxis: 'y',
             responsive: true,
-            maintainAspectRatio: false,
             plugins: {
                 legend: {
                     display: false
                 }
             },
             scales: {
-                y: {
+                x: {
                     beginAtZero: true,
                     ticks: {
                         stepSize: 1
@@ -564,16 +584,14 @@ async function generateReports() {
         
         // Get all goals
         const goals = await new Promise((resolve, reject) => {
-            const request = goalStore.getAll();
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error);
+            goalStore.getAll().onsuccess = (event) => resolve(event.target.result);
         });
 
         // Prepare data for charts
         const statusData = {
             'active': 0,
             'completed': 0,
-            'overdue': 0
+            'not started': 0
         };
         
         const typeData = {};
@@ -621,7 +639,7 @@ async function generateReports() {
         window.statusChart.data.datasets[0].data = [
             statusData.active,
             statusData.completed,
-            statusData.overdue
+            statusData['not started']
         ];
         window.statusChart.update();
         
