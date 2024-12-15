@@ -505,7 +505,7 @@ function initializeCharts() {
         }
 
         // Initialize Status Chart
-        const statusCtx = document.getElementById('goalStatusChart');
+        const statusCtx = document.getElementById('statusChart');
         if (!statusCtx) {
             throw new Error('Status chart canvas not found');
         }
@@ -530,7 +530,7 @@ function initializeCharts() {
         });
 
         // Initialize Type Chart
-        const typeCtx = document.getElementById('goalTypeChart');
+        const typeCtx = document.getElementById('typeChart');
         if (!typeCtx) {
             throw new Error('Type chart canvas not found');
         }
@@ -576,9 +576,9 @@ async function generateReports() {
         
         // Update Status Chart
         const statusData = {
-            'in-progress': goals.filter(goal => goal.status === 'in-progress').length,
+            'in-progress': goals.filter(goal => goal.status === 'active').length,
             'completed': goals.filter(goal => goal.status === 'completed').length,
-            'not-started': goals.filter(goal => goal.status === 'not-started').length
+            'not-started': goals.filter(goal => goal.status === 'not started').length
         };
         
         window.statusChart.data.datasets[0].data = [
@@ -598,6 +598,26 @@ async function generateReports() {
         window.typeChart.data.datasets[0].data = Object.values(typeData);
         window.typeChart.update();
 
+        // Update table
+        const tableBody = document.getElementById('reportTableBody');
+        if (!tableBody) {
+            throw new Error('Report table body not found');
+        }
+
+        tableBody.innerHTML = '';
+        goals.forEach(goal => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${goal.type}</td>
+                <td>${goal.title}</td>
+                <td>${goal.status}</td>
+                <td>${goal.progress}%</td>
+                <td>${new Date(goal.timeBound).toLocaleDateString()}</td>
+                <td>${goal.tasks ? goal.tasks.length : 0}</td>
+            `;
+            tableBody.appendChild(row);
+        });
+
     } catch (error) {
         console.error('Error generating reports:', error);
     }
@@ -607,6 +627,7 @@ async function generateReports() {
 async function exportReportAsPDF() {
     try {
         const goals = await getAllGoals();
+        const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
         // Add title
