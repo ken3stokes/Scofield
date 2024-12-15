@@ -455,29 +455,11 @@ document.getElementById("viewInProgress").addEventListener("click", () => loadGo
 document.getElementById("viewCompleted").addEventListener("click", () => loadGoals("completed"));
 
 // Show Reports
-function showReports() {
-    if (typeof bootstrap === 'undefined') {
-        console.error('Bootstrap is not loaded');
-        alert('Error: Could not show reports. Please refresh the page and try again.');
-        return;
-    }
-
-    const reportsModal = document.getElementById('reportsModal');
-    if (!reportsModal) {
-        console.error('Reports modal element not found');
-        alert('Error: Could not find reports modal. Please refresh the page and try again.');
-        return;
-    }
-
-    // Initialize charts before showing modal
-    initializeCharts();
-    
-    // Show the modal
-    const modal = new bootstrap.Modal(reportsModal);
-    modal.show();
-    
-    // Generate reports after modal is shown
-    generateReports();
+async function showReports() {
+    const reportsModal = new bootstrap.Modal(document.getElementById('reportsModal'));
+    reportsModal.show();
+    await initializeCharts();
+    await generateReports();
 }
 
 // Initialize Charts
@@ -1064,9 +1046,6 @@ async function exportReportAsPDF() {
         alert('Error generating PDF: ' + error.message);
     }
 }
-
-// For backward compatibility
-const exportReport = exportReportAsPDF;
 
 // Export Goals as JSON backup
 async function exportGoals() {
