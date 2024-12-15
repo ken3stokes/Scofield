@@ -458,14 +458,12 @@ document.getElementById("viewCompleted").addEventListener("click", () => loadGoa
 function showReports() {
     if (typeof bootstrap === 'undefined') {
         console.error('Bootstrap is not loaded');
-        alert('Error: Could not show reports. Please refresh the page and try again.');
         return;
     }
 
     const reportsModal = document.getElementById('reportsModal');
     if (!reportsModal) {
         console.error('Reports modal element not found');
-        alert('Error: Could not find reports modal. Please refresh the page and try again.');
         return;
     }
 
@@ -696,193 +694,91 @@ async function getAllGoals() {
 // Export Goals as JSON backup
 async function exportGoals() {
     try {
-        const transaction = db.transaction(["goals", "tasks"], "readonly");
-        const goalStore = transaction.objectStore("goals");
-        const taskStore = transaction.objectStore("tasks");
-
-        // Get all goals and tasks
-        const goals = await new Promise((resolve, reject) => {
-            goalStore.getAll().onsuccess = (event) => resolve(event.target.result);
-        });
-        
-        const tasks = await new Promise((resolve, reject) => {
-            taskStore.getAll().onsuccess = (event) => resolve(event.target.result);
-        });
-        
-        // Create backup object
-        const backup = {
-            version: "1.0",
-            timestamp: new Date().toISOString(),
-            data: {
-                goals: goals,
-                tasks: tasks
-            }
+        const goals = await getAllGoals();
+        const data = {
+            goals: goals,
+            exportDate: new Date().toISOString()
         };
         
-        // Convert to JSON and create blob
-        const jsonString = JSON.stringify(backup, null, 2);
-        const blob = new Blob([jsonString], { type: 'application/json' });
-        
-        // Create download link
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `scofield_backup_${new Date().toISOString().split('T')[0]}.json`;
+        link.download = `scofield-goals-backup-${new Date().toISOString().split('T')[0]}.json`;
         
-        // Trigger download
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
         
-        // Update last export date
         localStorage.setItem('lastExportDate', new Date().toISOString());
-        
     } catch (error) {
-        console.error("Error exporting goals:", error);
-        alert("Error exporting goals. Please try again.");
+        console.error('Error exporting goals:', error);
+        alert('Error exporting goals. Please try again.');
     }
 }
 
 // Import Goals
-async function importGoals() {
-    try {
-        if (!db) {
-            console.log("Database not initialized, attempting to initialize...");
-            await initializeDB();
-        }
-        
-        if (!db) {
-            throw new Error("Failed to initialize database");
-        }
+function importGoals() {
+    if (!db) {
+        alert('Database not ready. Please try again in a moment.');
+        return;
+    }
 
-        console.log("Database status:", {
-            name: db.name,
-            version: db.version,
-            objectStoreNames: Array.from(db.objectStoreNames)
-        });
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
 
-        const input = document.createElement("input");
-        input.type = "file";
-        input.accept = ".json";
-        
-        input.onchange = async (e) => {
+        const reader = new FileReader();
+        reader.onload = async (event) => {
             try {
-                const file = e.target.files[0];
-                console.log("Selected file:", file.name);
+                const data = JSON.parse(event.target.result);
                 
-                const fileContent = await new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = (e) => resolve(e.target.result);
-                    reader.onerror = (e) => reject(new Error("Error reading file"));
-                    reader.readAsText(file);
+                // Clear existing goals
+                const transaction = db.transaction(['goals'], 'readwrite');
+                const store = transaction.objectStore('goals');
+                await new Promise((resolve, reject) => {
+                    const request = store.clear();
+                    request.onsuccess = resolve;
+                    request.onerror = reject;
                 });
                 
-                console.log("File content:", fileContent.substring(0, 200) + "...");
-                
-                const backup = JSON.parse(fileContent);
-                console.log("Parsed backup structure:", {
-                    hasVersion: !!backup.version,
-                    hasTimestamp: !!backup.timestamp,
-                    hasData: !!backup.data,
-                    dataKeys: backup.data ? Object.keys(backup.data) : [],
-                    goalsCount: backup.data?.goals?.length || 0,
-                    tasksCount: backup.data?.tasks?.length || 0
-                });
-
-                if (!backup.data) {
-                    throw new Error("Backup file missing 'data' property");
-                }
-                if (!backup.data.goals) {
-                    throw new Error("Backup file missing 'goals' array");
-                }
-                if (!Array.isArray(backup.data.goals)) {
-                    throw new Error("'goals' is not an array");
-                }
-
-                const transaction = db.transaction(["goals", "tasks"], "readwrite");
-                console.log("Transaction started");
-
-                const goalStore = transaction.objectStore("goals");
-                const taskStore = transaction.objectStore("tasks");
-
-                // Clear existing data
-                await Promise.all([
-                    new Promise((resolve, reject) => {
-                        const request = goalStore.clear();
-                        request.onsuccess = () => resolve();
-                        request.onerror = (e) => reject(e.target.error);
-                    }),
-                    new Promise((resolve, reject) => {
-                        const request = taskStore.clear();
-                        request.onsuccess = () => resolve();
-                        request.onerror = (e) => reject(e.target.error);
-                    })
-                ]);
-                
-                console.log("Existing data cleared");
-
-                // Import goals
-                for (const goal of backup.data.goals) {
+                // Import new goals
+                for (const goal of data.goals) {
                     await new Promise((resolve, reject) => {
-                        const request = goalStore.add(goal);
-                        request.onsuccess = () => resolve();
-                        request.onerror = (e) => reject(e.target.error);
+                        const request = store.add(goal);
+                        request.onsuccess = resolve;
+                        request.onerror = reject;
                     });
                 }
                 
-                console.log("Goals imported");
-
-                // Import tasks
-                if (backup.data.tasks && Array.isArray(backup.data.tasks)) {
-                    for (const task of backup.data.tasks) {
-                        await new Promise((resolve, reject) => {
-                            const request = taskStore.add(task);
-                            request.onsuccess = () => resolve();
-                            request.onerror = (e) => reject(e.target.error);
-                        });
-                    }
-                    console.log("Tasks imported");
-                }
-
-                alert("Goals and tasks imported successfully!");
+                alert('Goals imported successfully!');
                 loadGoals();
-                
             } catch (error) {
-                console.error("Import error:", {
-                    message: error.message,
-                    stack: error.stack,
-                    name: error.name,
-                    code: error.code
-                });
-                alert(`Error importing goals: ${error.message}`);
+                console.error('Error importing goals:', error);
+                alert('Error importing goals. Please make sure the file is valid.');
             }
         };
         
-        input.click();
-        
-    } catch (error) {
-        console.error("Import initialization error:", {
-            message: error.message,
-            stack: error.stack,
-            name: error.name,
-            code: error.code
-        });
-        alert(`Failed to start import: ${error.message}`);
-    }
+        reader.readAsText(file);
+    };
+    
+    input.click();
 }
 
 // Show Instructions
 function showInstructions() {
     if (typeof bootstrap === 'undefined') {
         console.error('Bootstrap is not loaded');
-        alert('Error: Could not show instructions. Please refresh the page and try again.');
         return;
     }
     const instructionsModal = document.getElementById("instructionsModal");
     if (!instructionsModal) {
         console.error('Instructions modal element not found');
-        alert('Error: Could not find instructions modal. Please refresh the page and try again.');
         return;
     }
     const modal = new bootstrap.Modal(instructionsModal);

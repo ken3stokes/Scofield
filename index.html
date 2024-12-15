@@ -18,16 +18,16 @@
                 <i class="bi bi-compass"></i> SCOFIELD
             </span>
             <div class="d-flex gap-2">
-                <button class="btn btn-outline-light btn-sm" onclick="exportGoals()">
+                <button class="btn btn-outline-light btn-sm" id="exportBtn">
                     <i class="bi bi-download me-1 d-none d-sm-inline"></i>Backup
                 </button>
-                <button class="btn btn-outline-light btn-sm" onclick="importGoals()">
+                <button class="btn btn-outline-light btn-sm" id="importBtn">
                     <i class="bi bi-upload me-1 d-none d-sm-inline"></i>Import
                 </button>
-                <button class="btn btn-outline-light btn-sm" onclick="showInstructions()">
+                <button class="btn btn-outline-light btn-sm" id="helpBtn">
                     <i class="bi bi-question-circle me-1 d-none d-sm-inline"></i>Help
                 </button>
-                <button class="btn btn-outline-light btn-sm" onclick="showReports()">
+                <button class="btn btn-outline-light btn-sm" id="reportsBtn">
                     <i class="bi bi-graph-up me-1 d-none d-sm-inline"></i>Reports
                 </button>
                 <a href="home.html" class="btn btn-outline-light btn-sm">
@@ -252,5 +252,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
     <script src="js/app.js"></script>
+    <script>
+        document.getElementById('exportBtn').addEventListener('click', exportGoals);
+        document.getElementById('importBtn').addEventListener('click', importGoals);
+        document.getElementById('helpBtn').addEventListener('click', showInstructions);
+        document.getElementById('reportsBtn').addEventListener('click', showReports);
+    </script>
 </body>
 </html>

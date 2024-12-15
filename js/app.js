@@ -467,18 +467,33 @@ document.getElementById("viewAll").addEventListener("click", () => loadGoals("al
 document.getElementById("viewInProgress").addEventListener("click", () => loadGoals("active"));
 document.getElementById("viewCompleted").addEventListener("click", () => loadGoals("completed"));
 
+// Get All Goals
+async function getAllGoals() {
+    return new Promise((resolve, reject) => {
+        if (!db) {
+            reject(new Error('Database not initialized'));
+            return;
+        }
+
+        const transaction = db.transaction(['goals'], 'readonly');
+        const store = transaction.objectStore('goals');
+        const request = store.getAll();
+
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result || []);
+    });
+}
+
 // Show Reports
 function showReports() {
     if (typeof bootstrap === 'undefined') {
         console.error('Bootstrap is not loaded');
-        alert('Error: Could not show reports. Please refresh the page and try again.');
         return;
     }
 
     const reportsModal = document.getElementById('reportsModal');
     if (!reportsModal) {
         console.error('Reports modal element not found');
-        alert('Error: Could not find reports modal. Please refresh the page and try again.');
         return;
     }
 
@@ -493,6 +508,102 @@ function showReports() {
     generateReports();
 }
 
+// Show Instructions
+function showInstructions() {
+    if (typeof bootstrap === 'undefined') {
+        console.error('Bootstrap is not loaded');
+        return;
+    }
+
+    const instructionsModal = document.getElementById('instructionsModal');
+    if (!instructionsModal) {
+        console.error('Instructions modal element not found');
+        return;
+    }
+
+    const modal = new bootstrap.Modal(instructionsModal);
+    modal.show();
+}
+
+// Export Goals
+async function exportGoals() {
+    try {
+        const goals = await getAllGoals();
+        const data = {
+            goals: goals,
+            exportDate: new Date().toISOString()
+        };
+        
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `scofield-goals-backup-${new Date().toISOString().split('T')[0]}.json`;
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        localStorage.setItem('lastExportDate', new Date().toISOString());
+    } catch (error) {
+        console.error('Error exporting goals:', error);
+        alert('Error exporting goals. Please try again.');
+    }
+}
+
+// Import Goals
+function importGoals() {
+    if (!db) {
+        alert('Database not ready. Please try again in a moment.');
+        return;
+    }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            try {
+                const data = JSON.parse(event.target.result);
+                
+                // Clear existing goals
+                const transaction = db.transaction(['goals'], 'readwrite');
+                const store = transaction.objectStore('goals');
+                await new Promise((resolve, reject) => {
+                    const request = store.clear();
+                    request.onsuccess = resolve;
+                    request.onerror = reject;
+                });
+                
+                // Import new goals
+                for (const goal of data.goals) {
+                    await new Promise((resolve, reject) => {
+                        const request = store.add(goal);
+                        request.onsuccess = resolve;
+                        request.onerror = reject;
+                    });
+                }
+                
+                alert('Goals imported successfully!');
+                loadGoals();
+            } catch (error) {
+                console.error('Error importing goals:', error);
+                alert('Error importing goals. Please make sure the file is valid.');
+            }
+        };
+        
+        reader.readAsText(file);
+    };
+    
+    input.click();
+}
+
 // Initialize Charts
 function initializeCharts() {
     try {
@@ -504,11 +615,15 @@ function initializeCharts() {
             window.typeChart.destroy();
         }
 
-        // Initialize Status Chart
         const statusCtx = document.getElementById('statusChart');
-        if (!statusCtx) {
-            throw new Error('Status chart canvas not found');
+        const typeCtx = document.getElementById('typeChart');
+
+        if (!statusCtx || !typeCtx) {
+            console.error('Chart canvas elements not found. Status:', !!statusCtx, 'Type:', !!typeCtx);
+            return;
         }
+
+        // Initialize Status Chart with default data
         window.statusChart = new Chart(statusCtx, {
             type: 'doughnut',
             data: {
@@ -529,18 +644,14 @@ function initializeCharts() {
             }
         });
 
-        // Initialize Type Chart
-        const typeCtx = document.getElementById('typeChart');
-        if (!typeCtx) {
-            throw new Error('Type chart canvas not found');
-        }
+        // Initialize Type Chart with default data
         window.typeChart = new Chart(typeCtx, {
             type: 'bar',
             data: {
-                labels: [],
+                labels: ['Personal', 'Work', 'Education', 'Health', 'Other'],
                 datasets: [{
                     label: 'Number of Goals',
-                    data: [],
+                    data: [0, 0, 0, 0, 0],
                     backgroundColor: '#0d6efd'
                 }]
             },
@@ -574,11 +685,16 @@ async function generateReports() {
     try {
         const goals = await getAllGoals();
         
+        if (!window.statusChart || !window.typeChart) {
+            console.error('Charts not initialized');
+            return;
+        }
+
         // Update Status Chart
         const statusData = {
             'in-progress': goals.filter(goal => goal.status === 'active').length,
             'completed': goals.filter(goal => goal.status === 'completed').length,
-            'not-started': goals.filter(goal => goal.status === 'not started').length
+            'not-started': goals.filter(goal => !goal.status || goal.status === 'not started').length
         };
         
         window.statusChart.data.datasets[0].data = [
@@ -589,9 +705,17 @@ async function generateReports() {
         window.statusChart.update();
 
         // Update Type Chart
-        const typeData = {};
+        const typeData = {
+            'Personal': 0,
+            'Work': 0,
+            'Education': 0,
+            'Health': 0,
+            'Other': 0
+        };
+        
         goals.forEach(goal => {
-            typeData[goal.type] = (typeData[goal.type] || 0) + 1;
+            const type = goal.type || 'Other';
+            typeData[type] = (typeData[type] || 0) + 1;
         });
 
         window.typeChart.data.labels = Object.keys(typeData);
@@ -601,23 +725,22 @@ async function generateReports() {
         // Update table
         const tableBody = document.getElementById('reportTableBody');
         if (!tableBody) {
-            throw new Error('Report table body not found');
+            console.error('Report table body not found');
+            return;
         }
 
-        tableBody.innerHTML = '';
-        goals.forEach(goal => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${goal.type}</td>
-                <td>${goal.title}</td>
-                <td>${goal.status}</td>
-                <td>${goal.progress}%</td>
-                <td>${new Date(goal.timeBound).toLocaleDateString()}</td>
-                <td>${goal.tasks ? goal.tasks.length : 0}</td>
-            `;
-            tableBody.appendChild(row);
-        });
+        tableBody.innerHTML = goals.map(goal => `
+            <tr>
+                <td>${goal.type || 'N/A'}</td>
+                <td>${goal.title || 'N/A'}</td>
+                <td>${goal.status || 'Not Started'}</td>
+                <td>${goal.progress || 0}%</td>
+                <td>${goal.timeBound || 'N/A'}</td>
+                <td>${goal.tasks?.length || 0}</td>
+            </tr>
+        `).join('');
 
+        console.log('Reports generated successfully');
     } catch (error) {
         console.error('Error generating reports:', error);
     }
@@ -662,146 +785,6 @@ async function exportReportAsPDF() {
 
 // For backward compatibility
 const exportReport = exportReportAsPDF;
-
-// Export Goals as JSON backup
-async function exportGoals() {
-    try {
-        const transaction = db.transaction(["goals", "tasks"], "readonly");
-        const goalStore = transaction.objectStore("goals");
-        const taskStore = transaction.objectStore("tasks");
-        
-        // Get all goals and tasks
-        const goals = await new Promise((resolve, reject) => {
-            goalStore.getAll().onsuccess = (event) => resolve(event.target.result);
-        });
-        
-        const tasks = await new Promise((resolve, reject) => {
-            taskStore.getAll().onsuccess = (event) => resolve(event.target.result);
-        });
-        
-        // Create backup object
-        const backup = {
-            version: "1.0",
-            timestamp: new Date().toISOString(),
-            data: {
-                goals: goals,
-                tasks: tasks
-            }
-        };
-        
-        // Convert to JSON and create blob
-        const jsonString = JSON.stringify(backup, null, 2);
-        const blob = new Blob([jsonString], { type: 'application/json' });
-        
-        // Create download link
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `scofield_backup_${new Date().toISOString().split('T')[0]}.json`;
-        
-        // Trigger download
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        
-        // Update last export date
-        localStorage.setItem('lastExportDate', new Date().toISOString());
-        
-    } catch (error) {
-        console.error("Error exporting goals:", error);
-        alert("Error exporting goals. Please try again.");
-    }
-}
-
-// Show Instructions
-function showInstructions() {
-    if (typeof bootstrap === 'undefined') {
-        console.error('Bootstrap is not loaded');
-        alert('Error: Could not show instructions. Please refresh the page and try again.');
-        return;
-    }
-    const instructionsModal = document.getElementById("instructionsModal");
-    if (!instructionsModal) {
-        console.error('Instructions modal element not found');
-        alert('Error: Could not find instructions modal. Please refresh the page and try again.');
-        return;
-    }
-    const modal = new bootstrap.Modal(instructionsModal);
-    modal.show();
-}
-
-// Import Goals
-function importGoals() {
-    if (!db) {
-        alert("Database not ready. Please try again in a moment.");
-        return;
-    }
-
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".json";
-    
-    input.onchange = (e) => {
-        const file = e.target.files[0];
-        const reader = new FileReader();
-        
-        reader.onload = (event) => {
-            try {
-                const data = JSON.parse(event.target.result);
-                console.log("Importing data:", data);
-                
-                if (!data.goals || !Array.isArray(data.goals)) {
-                    throw new Error("Invalid backup file format");
-                }
-                
-                const transaction = db.transaction(["goals", "tasks"], "readwrite");
-                const goalStore = transaction.objectStore("goals");
-                const taskStore = transaction.objectStore("tasks");
-                
-                // Clear existing data
-                goalStore.clear().onsuccess = () => {
-                    taskStore.clear().onsuccess = () => {
-                        // Import goals
-                        data.goals.forEach(goal => {
-                            goalStore.add(goal);
-                        });
-                        
-                        // Import tasks if they exist
-                        if (data.tasks && Array.isArray(data.tasks)) {
-                            data.tasks.forEach(task => {
-                                taskStore.add(task);
-                            });
-                        }
-                    };
-                };
-                
-                transaction.oncomplete = () => {
-                    alert("Goals and tasks imported successfully!");
-                    loadGoals();
-                };
-                
-                transaction.onerror = (error) => {
-                    console.error("Transaction error:", error);
-                    alert("Error importing goals: " + error.target.error);
-                };
-                
-            } catch (error) {
-                console.error("Import error:", error);
-                alert("Error importing goals. Please make sure you selected a valid backup file.");
-            }
-        };
-        
-        reader.onerror = (error) => {
-            console.error("File reading error:", error);
-            alert("Error reading the backup file.");
-        };
-        
-        reader.readAsText(file);
-    };
-    
-    input.click();
-}
 
 // Check if backup is needed
 function isBackupNeeded() {
