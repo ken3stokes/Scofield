@@ -464,58 +464,78 @@ async function showReports() {
 
 // Initialize Charts
 function initializeCharts() {
-    // Initialize Status Chart
-    const statusCtx = document.getElementById('goalStatusChart');
-    window.statusChart = new Chart(statusCtx, {
-        type: 'doughnut',
-        data: {
-            labels: ['In Progress', 'Completed', 'Not Started'],
-            datasets: [{
-                data: [0, 0, 0],
-                backgroundColor: ['#0d6efd', '#198754', '#dc3545']
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            }
+    try {
+        // Destroy existing charts if they exist
+        if (window.statusChart instanceof Chart) {
+            window.statusChart.destroy();
         }
-    });
+        if (window.typeChart instanceof Chart) {
+            window.typeChart.destroy();
+        }
 
-    // Initialize Type Chart
-    const typeCtx = document.getElementById('goalTypeChart');
-    window.typeChart = new Chart(typeCtx, {
-        type: 'bar',
-        data: {
-            labels: [],
-            datasets: [{
-                label: 'Number of Goals',
-                data: [],
-                backgroundColor: '#0d6efd'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                }
+        // Initialize Status Chart
+        const statusCtx = document.getElementById('goalStatusChart');
+        if (!statusCtx) {
+            throw new Error('Status chart canvas not found');
+        }
+        window.statusChart = new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['In Progress', 'Completed', 'Not Started'],
+                datasets: [{
+                    data: [0, 0, 0],
+                    backgroundColor: ['#0d6efd', '#198754', '#dc3545']
+                }]
             },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
                     }
                 }
             }
+        });
+
+        // Initialize Type Chart
+        const typeCtx = document.getElementById('goalTypeChart');
+        if (!typeCtx) {
+            throw new Error('Type chart canvas not found');
         }
-    });
+        window.typeChart = new Chart(typeCtx, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Number of Goals',
+                    data: [],
+                    backgroundColor: '#0d6efd'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+
+        console.log('Charts initialized successfully');
+    } catch (error) {
+        console.error('Error initializing charts:', error);
+    }
 }
 
 // Generate Reports
