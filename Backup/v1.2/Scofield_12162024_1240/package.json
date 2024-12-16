@@ -1,0 +1,25 @@
+{
+  "name": "scofield-todo",
+  "version": "1.2.0",
+  "description": "A SMART goal tracking application with task management",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ken3stokes/Scofield.git"
+  },
+  "keywords": [
+    "todo",
+    "goals",
+    "smart-goals",
+    "task-management"
+  ],
+  "author": "Ken Stokes",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ken3stokes/Scofield/issues"
+  },
+  "homepage": "https://github.com/ken3stokes/Scofield#readme"
+}
