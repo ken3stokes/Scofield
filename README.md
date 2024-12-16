@@ -1,8 +1,24 @@
-# SCOFIELD - Strategic Goal Planning System
+# SCOFIELD - Goal Execution System
 
-Version 1.2.0
+A powerful SMART Goals tracking system designed to help you achieve your objectives effectively.
 
-A private, browser-based goal management system inspired by Michael Scofield's strategic approach.
+## Project Structure
+
+The project is organized as follows:
+
+- `/` (root): Contains the current production version that is live
+- `/dev`: Development workspace for new features and fixes
+- `/releases`: Archive of previous versions
+  - `/releases/v1.2`: Version 1.2 release
+  - `/releases/v1.3`: Version 1.3 release (in development)
+
+## Development Workflow
+
+1. All new development work should be done in the `/dev` directory
+2. Once features are tested and ready:
+   - Copy the changes to the root directory for production
+   - Archive the complete version in `/releases/vX.X`
+3. The root directory always reflects what's live on the website
 
 ## Features
 

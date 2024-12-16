@@ -569,7 +569,13 @@ async function generateReports() {
             'overdue': 0
         };
         
+        // Enhanced data tracking
         const typeData = {};
+        const categoryStats = {};
+        const upcomingDeadlines = [];
+        const NOW = new Date();
+        const WEEK_FROM_NOW = new Date(NOW.getTime() + (7 * 24 * 60 * 60 * 1000));
+        
         const tableBody = document.querySelector("#goalSummaryTable tbody");
         tableBody.innerHTML = "";
         
@@ -577,9 +583,33 @@ async function generateReports() {
         for (const goal of goals) {
             // Determine status
             const dueDate = new Date(goal.timeBound);
-            const isOverdue = dueDate < new Date() && goal.status !== "completed";
+            const isOverdue = dueDate < NOW && goal.status !== "completed";
             const status = isOverdue ? 'overdue' : goal.status;
             statusData[status]++;
+            
+            // Track upcoming deadlines (within next 7 days)
+            if (!isOverdue && dueDate <= WEEK_FROM_NOW) {
+                upcomingDeadlines.push({
+                    title: goal.title,
+                    dueDate: dueDate,
+                    progress: goal.progress,
+                    type: goal.type
+                });
+            }
+            
+            // Enhanced category tracking
+            if (!categoryStats[goal.type]) {
+                categoryStats[goal.type] = {
+                    total: 0,
+                    completed: 0,
+                    active: 0,
+                    overdue: 0,
+                    totalProgress: 0
+                };
+            }
+            categoryStats[goal.type].total++;
+            categoryStats[goal.type][status]++;
+            categoryStats[goal.type].totalProgress += goal.progress;
             
             // Count by type
             typeData[goal.type] = (typeData[goal.type] || 0) + 1;
@@ -594,27 +624,73 @@ async function generateReports() {
             
             const completedTasks = tasks.filter(task => task.completed).length;
             
-            // Add row to table
+            // Add row to table with enhanced styling
             const row = document.createElement("tr");
+            const deadlineClass = isOverdue ? 'table-danger' : 
+                                (dueDate <= WEEK_FROM_NOW ? 'table-warning' : '');
+            row.className = deadlineClass;
             row.innerHTML = `
                 <td>${goal.type}</td>
                 <td>${goal.title}</td>
                 <td>
-                    <span class="badge ${status === 'completed' ? 'bg-success' : status === 'overdue' ? 'bg-danger' : 'bg-primary'}">
-                        ${status.charAt(0).toUpperCase() + status.slice(1)}
+                    <span class="badge ${goal.status === "completed" ? "bg-success" : status === 'overdue' ? "bg-danger" : "bg-primary"}">
+                        ${goal.status === "completed" ? "Completed" : status === 'overdue' ? "Overdue" : "In Progress"}
                     </span>
                 </td>
                 <td>
                     <div class="progress">
-                        <div class="progress-bar" role="progressbar" style="width: ${goal.progress}%">
+                        <div class="progress-bar" role="progressbar" style="width: ${goal.progress}%" aria-valuenow="${goal.progress}" aria-valuemin="0" aria-valuemax="100">
                             ${goal.progress}%
                         </div>
                     </div>
                 </td>
-                <td>${new Date(goal.timeBound).toLocaleDateString()}</td>
+                <td>${dueDate.toLocaleDateString()}</td>
                 <td>${completedTasks}/${tasks.length}</td>
             `;
             tableBody.appendChild(row);
+        }
+
+        // Generate category statistics summary
+        const categoryStatsDiv = document.getElementById('categoryStats');
+        categoryStatsDiv.innerHTML = '<h4>Category Statistics</h4>';
+        for (const [category, stats] of Object.entries(categoryStats)) {
+            const avgProgress = (stats.totalProgress / stats.total).toFixed(1);
+            categoryStatsDiv.innerHTML += `
+                <div class="card mb-2">
+                    <div class="card-body">
+                        <h5 class="card-title">${category}</h5>
+                        <p class="card-text">
+                            Average Progress: ${avgProgress}%<br>
+                            Total Goals: ${stats.total}<br>
+                            Completed: ${stats.completed}<br>
+                            Active: ${stats.active}<br>
+                            Overdue: ${stats.overdue}
+                        </p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Display upcoming deadlines
+        const deadlinesDiv = document.getElementById('upcomingDeadlines');
+        deadlinesDiv.innerHTML = '<h4>Upcoming Deadlines (Next 7 Days)</h4>';
+        if (upcomingDeadlines.length > 0) {
+            upcomingDeadlines.sort((a, b) => a.dueDate - b.dueDate);
+            deadlinesDiv.innerHTML += `
+                <div class="list-group">
+                    ${upcomingDeadlines.map(goal => `
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">${goal.title}</h5>
+                                <small>${goal.dueDate.toLocaleDateString()}</small>
+                            </div>
+                            <p class="mb-1">Type: ${goal.type} | Progress: ${goal.progress}%</p>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        } else {
+            deadlinesDiv.innerHTML += '<p>No upcoming deadlines in the next 7 days.</p>';
         }
         
         // Update Status Chart
@@ -645,35 +721,46 @@ async function exportReportAsPDF() {
             return;
         }
 
-        const modal = document.getElementById('reportsModal');
-        if (!modal) {
-            alert('Report content not found');
-            return;
-        }
-
-        const content = modal.querySelector('.modal-content');
-        if (!content) {
-            alert('Modal content not found');
-            return;
-        }
-
         // Create PDF
         const doc = new jsPDF('p', 'mm', 'a4');
-        
-        // Use html2canvas to capture the content
-        const canvas = await html2canvas(content, {
-            scale: 2,
-            useCORS: true,
-            logging: false
-        });
-
-        // Add the captured content to PDF
-        const imgData = canvas.toDataURL('image/png');
         const pageWidth = doc.internal.pageSize.getWidth();
-        const contentWidth = pageWidth - 20;
-        const contentHeight = (canvas.height * contentWidth) / canvas.width;
         
-        doc.addImage(imgData, 'PNG', 10, 10, contentWidth, contentHeight);
+        // Title
+        doc.setFontSize(24);
+        doc.text('SMART Goals Report', pageWidth/2, 20, { align: 'center' });
+        doc.setFontSize(12);
+        doc.text(new Date().toLocaleDateString(), pageWidth/2, 30, { align: 'center' });
+
+        // Add Goal Summary Table
+        const table = document.getElementById('goalSummaryTable');
+        if (table) {
+            const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent);
+            const rows = Array.from(table.querySelectorAll('tbody tr')).map(tr => 
+                Array.from(tr.querySelectorAll('td')).map(td => td.textContent.trim())
+            );
+
+            doc.autoTable({
+                head: [headers],
+                body: rows,
+                startY: 40,
+                margin: { top: 30 },
+                styles: { 
+                    overflow: 'linebreak',
+                    cellPadding: 2,
+                    fontSize: 10
+                },
+                columnStyles: {
+                    0: { cellWidth: 30 }, // Type
+                    1: { cellWidth: 'auto' }, // Title
+                    2: { cellWidth: 25 }, // Status
+                    3: { cellWidth: 25 }, // Progress
+                    4: { cellWidth: 30 }, // Due Date
+                    5: { cellWidth: 25 } // Tasks
+                }
+            });
+        }
+
+        // Save the PDF
         doc.save('SCOFIELD-Goal-Report.pdf');
 
     } catch (error) {
@@ -693,11 +780,11 @@ async function exportGoals() {
         const taskStore = transaction.objectStore("tasks");
         
         // Get all goals and tasks
-        const goals = await new Promise((resolve, reject) => {
+        const goals = await new Promise((resolve) => {
             goalStore.getAll().onsuccess = (event) => resolve(event.target.result);
         });
         
-        const tasks = await new Promise((resolve, reject) => {
+        const tasks = await new Promise((resolve) => {
             taskStore.getAll().onsuccess = (event) => resolve(event.target.result);
         });
         
@@ -736,23 +823,6 @@ async function exportGoals() {
     }
 }
 
-// Show Instructions
-function showInstructions() {
-    if (typeof bootstrap === 'undefined') {
-        console.error('Bootstrap is not loaded');
-        alert('Error: Could not show instructions. Please refresh the page and try again.');
-        return;
-    }
-    const instructionsModal = document.getElementById("instructionsModal");
-    if (!instructionsModal) {
-        console.error('Instructions modal element not found');
-        alert('Error: Could not find instructions modal. Please refresh the page and try again.');
-        return;
-    }
-    const modal = new bootstrap.Modal(instructionsModal);
-    modal.show();
-}
-
 // Import Goals
 function importGoals() {
     if (!db) {
@@ -770,10 +840,11 @@ function importGoals() {
         
         reader.onload = (event) => {
             try {
-                const data = JSON.parse(event.target.result);
-                console.log("Importing data:", data);
+                const backup = JSON.parse(event.target.result);
+                console.log("Importing backup:", backup);
                 
-                if (!data.goals || !Array.isArray(data.goals)) {
+                // Validate backup format
+                if (!backup.version || !backup.data || !backup.data.goals || !Array.isArray(backup.data.goals)) {
                     throw new Error("Invalid backup file format");
                 }
                 
@@ -785,13 +856,13 @@ function importGoals() {
                 goalStore.clear().onsuccess = () => {
                     taskStore.clear().onsuccess = () => {
                         // Import goals
-                        data.goals.forEach(goal => {
+                        backup.data.goals.forEach(goal => {
                             goalStore.add(goal);
                         });
                         
                         // Import tasks if they exist
-                        if (data.tasks && Array.isArray(data.tasks)) {
-                            data.tasks.forEach(task => {
+                        if (backup.data.tasks && Array.isArray(backup.data.tasks)) {
+                            backup.data.tasks.forEach(task => {
                                 taskStore.add(task);
                             });
                         }
@@ -823,6 +894,23 @@ function importGoals() {
     };
     
     input.click();
+}
+
+// Show Instructions
+function showInstructions() {
+    if (typeof bootstrap === 'undefined') {
+        console.error('Bootstrap is not loaded');
+        alert('Error: Could not show instructions. Please refresh the page and try again.');
+        return;
+    }
+    const instructionsModal = document.getElementById("instructionsModal");
+    if (!instructionsModal) {
+        console.error('Instructions modal element not found');
+        alert('Error: Could not find instructions modal. Please refresh the page and try again.');
+        return;
+    }
+    const modal = new bootstrap.Modal(instructionsModal);
+    modal.show();
 }
 
 // Check if backup is needed
