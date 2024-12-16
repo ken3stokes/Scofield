@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Grid lines -->
+  <path d="M20,20 L180,20 L180,180 L20,180 Z" fill="none" stroke="#1e3d59" stroke-width="1"/>
+  <path d="M20,60 L180,60" stroke="#1e3d59" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <path d="M20,100 L180,100" stroke="#1e3d59" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <path d="M20,140 L180,140" stroke="#1e3d59" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <path d="M60,20 L60,180" stroke="#1e3d59" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <path d="M100,20 L100,180" stroke="#1e3d59" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <path d="M140,20 L140,180" stroke="#1e3d59" stroke-width="0.5" stroke-dasharray="2,2"/>
+  
+  <!-- Target circles -->
+  <circle cx="100" cy="100" r="70" fill="#1e3d59"/>
+  <circle cx="100" cy="100" r="52.5" fill="white"/>
+  <circle cx="100" cy="100" r="35" fill="#1e3d59"/>
+  <circle cx="100" cy="100" r="17.5" fill="white"/>
+  
+  <!-- Arrow -->
+  <path d="M100,100 L160,100" stroke="#1e3d59" stroke-width="3"/>
+  <path d="M150,90 L160,100 L150,110" fill="none" stroke="#1e3d59" stroke-width="3"/>
+</svg>
