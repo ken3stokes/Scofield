@@ -7,6 +7,8 @@ A powerful SMART Goals tracking system designed to help you achieve your objecti
 The project is organized as follows:
 
 - `/` (root): Contains the current production version that is live
+  - `index.html`: Landing page with project overview
+  - `goals.html`: SMART Goals tracking interface
 - `/dev`: Development workspace for new features and fixes
 - `/releases`: Archive of previous versions
   - `/releases/v1.2`: Version 1.2 release
@@ -31,11 +33,14 @@ The project is organized as follows:
 - Visual analytics and reports
 - PDF report generation
 
-## Recent Updates (v1.2.0)
+## Recent Updates (v1.2.1)
 
-- Simplified PDF report generation for better reliability
-- Enhanced report visualization with clear charts
-- Improved overall system stability
+- Improved navigation with direct access to SMART goals tool
+- Enhanced landing page with clearer call-to-action
+- Previous v1.2.0 updates:
+  - Simplified PDF report generation for better reliability
+  - Enhanced report visualization with clear charts
+  - Improved overall system stability
 - Previous v1.1.0 updates:
   - Added Export/Import functionality for data backup
   - Improved mobile responsiveness
@@ -51,9 +56,10 @@ The project is organized as follows:
 
 ## Getting Started
 
-1. Open `index.html` in your web browser
-2. Start creating your SMART goals
-3. Use the export feature regularly to backup your data
+1. Visit the landing page at `index.html`
+2. Click any of the action buttons to access the SMART goals tool
+3. Start creating and tracking your goals
+4. Use the export feature regularly to backup your data
 
 ## Reports and Analytics
 
